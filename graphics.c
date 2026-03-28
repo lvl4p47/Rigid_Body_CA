@@ -65,6 +65,7 @@ void Grid_Draw()
             tile = Grid_Get(j, i);
             int id = tile->id;
             int str = tile->rec_str;
+            uint8_t links = tile->links;
             int r = 0, g = 0, b = 0;
                 
             switch (id)
@@ -74,7 +75,8 @@ void Grid_Draw()
                 break;
             
             default:
-                r = 20 * str, g = 255, b = 255;
+                r = 20 * str, g = 100 * id, b = 0;
+                if(links != 0) b = 255;
                 break;
             }
             

@@ -39,11 +39,13 @@ void Events_Handle()
             if (e.button.button == SDL_BUTTON_RIGHT) 
             {
                 rmb_held = 1;
+                
             }
             if (e.button.button == SDL_BUTTON_LEFT) 
             {
                 lmb_held = 1;
-                Rec_Push(x, y, 1, 0, 10);
+                Rec_Push(x, y, 1, 0, 10, 1);
+                // printf("%d\n", Rec_Can_Move(x, y, 1, 0, 10, 1));
             }
             if (e.button.button == SDL_BUTTON_MIDDLE) 
             {
@@ -73,7 +75,7 @@ void Events_Handle()
             }
             if (lmb_held == 1)
             {
-                
+                Rec_Connect(x, y, 10);
             }
         }
     }

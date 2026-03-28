@@ -11,6 +11,20 @@
 #define GREEN_BG "\x1b[42m"
 #define RESET    "\x1b[0m"
 
+typedef enum
+{
+    NW,
+    N,
+    NE,
+    E,
+    SE,
+    S,
+    SW,
+    W
+} Moore_Directions;
+
+extern int8_t dir_to_coords[8][2];
+
 static inline int16_t mod(int16_t x, uint16_t m) {
     int16_t r = x % m;
     return r >= 0 ? r : r + m;

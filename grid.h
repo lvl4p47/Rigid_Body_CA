@@ -6,7 +6,8 @@
 typedef struct {
     uint32_t id;
     uint8_t type;
-    uint16_t rec_str;
+    int16_t rec_str;
+    uint8_t links;
 } Tile;
 
 extern uint16_t grid_width;
@@ -35,12 +36,14 @@ static inline Tile* Grid_Get(int16_t x, int16_t y)
 }
 
 void Grid_Set(int16_t x, int16_t y, uint32_t id, uint8_t type);
+void Grid_Move(int16_t x, int16_t y, int16_t dx, int16_t dy);
 void Grid_Update();
 
-uint8_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, uint16_t strength);
+int8_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength, uint8_t rigid);
 void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy);
 void Rec_Clean(int16_t x, int16_t y, int8_t dx, int8_t dy);
-
-void Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, uint16_t strength);
+void Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength, uint8_t rigid);
+void Rec_Link_All(int16_t x, int16_t y, int16_t strength);
+void Rec_Connect(int16_t x, int16_t y, int16_t strength);
 
 #endif

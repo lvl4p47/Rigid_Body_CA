@@ -1,5 +1,17 @@
 #include "utility.h"
 
+int8_t dir_to_coords[8][2] = 
+{
+    {-1, -1},
+    {0, -1},
+    {1, -1},
+    {1, 0},
+    {1, 1},
+    {0, 1},
+    {-1, 1},
+    {-1, 0}
+};
+
 int min(int a, int b)
 {
     if(a < b) return a;
