@@ -75,8 +75,9 @@ void Grid_Draw()
                 break;
             
             default:
-                r = 20 * str, g = 100 * id, b = 0;
+                r = 0, g = 100 * id, b = 0;
                 if(links != 0) b = 255;
+                if(str != 0) r = 255;
                 break;
             }
             

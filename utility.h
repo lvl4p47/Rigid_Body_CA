@@ -24,6 +24,7 @@ typedef enum
 } Moore_Directions;
 
 extern int8_t dir_to_coords[8][2];
+extern uint8_t coords_to_dir[3][3];
 
 static inline int16_t mod(int16_t x, uint16_t m) {
     int16_t r = x % m;

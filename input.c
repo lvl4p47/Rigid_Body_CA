@@ -45,7 +45,6 @@ void Events_Handle()
             {
                 lmb_held = 1;
                 Rec_Push(x, y, 1, 0, 10, 1);
-                // printf("%d\n", Rec_Can_Move(x, y, 1, 0, 10, 1));
             }
             if (e.button.button == SDL_BUTTON_MIDDLE) 
             {

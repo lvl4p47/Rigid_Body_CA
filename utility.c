@@ -12,6 +12,13 @@ int8_t dir_to_coords[8][2] =
     {-1, 0}
 };
 
+uint8_t coords_to_dir[3][3] = 
+{
+    {0, 1, 2},
+    {7, 255, 3},
+    {6, 5, 4}
+};
+
 int min(int a, int b)
 {
     if(a < b) return a;
