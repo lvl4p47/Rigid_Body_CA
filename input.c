@@ -44,11 +44,10 @@ void Events_Handle()
             if (e.button.button == SDL_BUTTON_LEFT) 
             {
                 lmb_held = 1;
-                Rec_Push(x, y, 1, 0, 10, 1);
             }
             if (e.button.button == SDL_BUTTON_MIDDLE) 
             {
-                
+                Rec_Push(x, y, 1, 0, 10, 1);
             }
         }
         if (e.type == SDL_MOUSEBUTTONUP) {
@@ -70,11 +69,11 @@ void Events_Handle()
 
             if (rmb_held == 1)
             {
-                Grid_Set(x, y, 1, 1);
+                Cell_Create(x, y, 0);
             }
             if (lmb_held == 1)
             {
-                Rec_Connect(x, y, 10);
+                Cell_Destroy(Grid_Get(x, y)->id);
             }
         }
     }

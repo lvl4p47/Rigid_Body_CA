@@ -3,6 +3,8 @@
 void All_Init()
 {
     Grid_Init(WINDOW_WIDTH / CELL_SIZE, WINDOW_HEIGHT / CELL_SIZE);
+    Genomes_Init();
+    Cells_Init();
     Graphics_Init();
 }
 

@@ -20,14 +20,15 @@ typedef enum
     SE,
     S,
     SW,
-    W
+    W,
+    C
 } Moore_Directions;
 
-extern int8_t dir_to_coords[8][2];
+extern int8_t dir_to_coords[9][2];
 extern uint8_t coords_to_dir[3][3];
 
-static inline int16_t mod(int16_t x, uint16_t m) {
-    int16_t r = x % m;
+static inline int64_t mod(int64_t x, int64_t m) {
+    int64_t r = x % m;
     return r >= 0 ? r : r + m;
 }
 int min(int a, int b);
@@ -67,5 +68,32 @@ static inline uint32_t lg(uint32_t a, uint32_t pow)
     
     return step;
 }
+
+static inline uint8_t Count_Bits_8(uint8_t x)
+{
+    uint8_t n = 0;
+
+    while (x != 0) {
+        n += (uint8_t)(x & 1u);
+        x >>= 1;
+    }
+
+    return n;
+}
+
+// STACK
+
+#define STACK_SIZE 16
+
+typedef struct Stack {
+    uint8_t data[STACK_SIZE];
+    uint8_t size;
+} Stack;
+
+uint8_t Stack_Reset(Stack *s);
+uint8_t Stack_Is_Empty(const Stack *s);
+uint8_t Stack_Push(Stack *s, uint8_t value);
+uint8_t Stack_Pop(Stack *s, uint8_t *value);
+uint8_t Stack_Peek(const Stack *s, uint8_t *value);
 
 #endif

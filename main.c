@@ -11,14 +11,14 @@ int main(int argc, char* args[])
     while (!quit) {
         Events_Handle();
         
+        Cells_Update();
         Grid_Update();
+        
+        // Genomes_Print();
 
-        if(timer == 0)
-        {
-            Screen_Clear();
+        Screen_Clear();
 
-            Screen_Draw();
-        }
+        Screen_Draw();
         
         SDL_Delay(0);
     }

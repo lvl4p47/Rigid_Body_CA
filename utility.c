@@ -1,6 +1,6 @@
 #include "utility.h"
 
-int8_t dir_to_coords[8][2] = 
+int8_t dir_to_coords[9][2] = 
 {
     {-1, -1},
     {0, -1},
@@ -9,13 +9,14 @@ int8_t dir_to_coords[8][2] =
     {1, 1},
     {0, 1},
     {-1, 1},
-    {-1, 0}
+    {-1, 0},
+    {0, 0}
 };
 
 uint8_t coords_to_dir[3][3] = 
 {
     {0, 1, 2},
-    {7, 255, 3},
+    {7, 8, 3},
     {6, 5, 4}
 };
 
@@ -49,4 +50,51 @@ float power(int a, int n)
         }
     }
     return ans;
+}
+
+// STACK
+
+uint8_t Stack_Reset(Stack *s)
+{
+    if (!s) return 0;
+    s->size = 0;
+    return 1;
+}
+
+uint8_t Stack_Is_Empty(const Stack *s)
+{
+    if (!s) return 1;
+    return (s->size == 0);
+}
+
+uint8_t Stack_Push(Stack *s, uint8_t value)
+{
+    if (!s) return 0;
+    if (s->size >= STACK_SIZE) return 0;
+
+    s->data[s->size] = value;
+    s->size++;
+    return 1;
+}
+
+uint8_t Stack_Pop(Stack *s, uint8_t *value)
+{
+    if (!s) return 0;
+    if (s->size == 0) return 0;
+
+    s->size--;
+    if (value) {
+        *value = s->data[s->size];
+    }
+    return 1;
+}
+
+uint8_t Stack_Peek(const Stack *s, uint8_t *value)
+{
+    if (!s) return 0;
+    if (s->size == 0) return 0;
+    if (!value) return 0;
+
+    *value = s->data[s->size - 1];
+    return 1;
 }

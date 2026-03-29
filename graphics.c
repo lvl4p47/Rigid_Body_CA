@@ -4,6 +4,8 @@
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
 
+uint8_t draw_links = 1;
+
 
 void Graphics_Init()
 {
@@ -63,21 +65,21 @@ void Grid_Draw()
         for(int j = 0; j < grid_width; j++)
         {
             tile = Grid_Get(j, i);
+            int type = tile->type;
             int id = tile->id;
             int str = tile->rec_str;
             uint8_t links = tile->links;
             int r = 0, g = 0, b = 0;
                 
-            switch (id)
+            switch (type)
             {
             case 0:
                 
                 break;
             
             default:
-                r = 0, g = 100 * id, b = 0;
-                if(links != 0) b = 255;
-                if(str != 0) r = 255;
+                r = 127, g = 127, b = 127;
+                if(id != 0) b = 255;
                 break;
             }
             
@@ -86,6 +88,25 @@ void Grid_Draw()
             
             SDL_SetRenderDrawColor(renderer, r, g, b, 255);
             SDL_RenderFillRect(renderer, &rect);
+            
+            if(draw_links == 0) continue;
+            
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            uint8_t mask;
+            int16_t dx, dy, cx, cy;
+            cx = rect.x + CELL_SIZE / 2;
+            cy = rect.y + CELL_SIZE / 2;
+            for(uint8_t dir = 0; dir < 8; dir++)
+            {
+                dx = dir_to_coords[dir][0] * CELL_SIZE / 2;
+                dy = dir_to_coords[dir][1] * CELL_SIZE / 2;
+                mask = (uint8_t)1 << dir;
+                
+                if(links & mask)
+                {
+                    SDL_RenderDrawLineF(renderer, cx, cy, cx + dx, cy + dy);
+                }
+            }
         }
     }
 }

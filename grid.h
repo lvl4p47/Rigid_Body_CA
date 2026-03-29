@@ -6,6 +6,8 @@
 typedef struct {
     uint32_t id;
     uint8_t type;
+    uint8_t material;
+    uint8_t energy;
     int16_t rec_str;
     uint8_t links;
 } Tile;
@@ -45,5 +47,29 @@ void Rec_Clean(int16_t x, int16_t y, int8_t dx, int8_t dy);
 void Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength, uint8_t rigid);
 void Rec_Link_All(int16_t x, int16_t y, int16_t strength);
 void Rec_Connect(int16_t x, int16_t y, int16_t strength);
+
+// CELLS
+
+#define MAX_CELLS 100000
+
+typedef struct {
+    uint16_t x;
+    uint16_t y;
+    uint8_t dir;
+    
+    uint32_t prev;
+    uint32_t next;
+    
+    uint8_t used;
+    uint16_t g_id;
+    uint8_t pc;
+    
+    Stack call_stack;
+    Stack data_stack;
+    
+    uint8_t acc;
+} Cell;
+
+extern Cell cells[MAX_CELLS];
 
 #endif
