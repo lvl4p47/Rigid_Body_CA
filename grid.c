@@ -55,7 +55,7 @@ void Grid_Set(int16_t x, int16_t y, uint32_t id, uint8_t type)
     
     grid_array[y1][x1].id = id;
     grid_array[y1][x1].type = type;
-    grid_array[y1][x1].material = 0;
+    grid_array[y1][x1].matter = 0;
     grid_array[y1][x1].energy = 0;
     grid_array[y1][x1].rec_str = 0;
     grid_array[y1][x1].links = 0;
@@ -78,14 +78,14 @@ void Grid_Move(int16_t x, int16_t y, int16_t dx, int16_t dy)
     
     grid_array[y2][x2].id = grid_array[y1][x1].id;
     grid_array[y2][x2].type = grid_array[y1][x1].type;
-    grid_array[y2][x2].material = grid_array[y1][x1].material;
+    grid_array[y2][x2].matter = grid_array[y1][x1].matter;
     grid_array[y2][x2].energy = grid_array[y1][x1].energy;
     grid_array[y2][x2].rec_str = 0;
     grid_array[y2][x2].links = grid_array[y1][x1].links;
     
     grid_array[y1][x1].id = 0;
     grid_array[y1][x1].type = 0;
-    grid_array[y1][x1].material = 0;
+    grid_array[y1][x1].matter = 0;
     grid_array[y1][x1].energy = 0;
     grid_array[y1][x1].rec_str = 0;
     grid_array[y1][x1].links = 0;
@@ -337,13 +337,15 @@ void Rec_Clean(int16_t x, int16_t y, int8_t dx, int8_t dy)
     return;
 }
 
-void Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength, uint8_t rigid)
+uint8_t Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength, uint8_t rigid)
 {
     int16_t ret = Rec_Can_Move(x, y, dx, dy, strength, rigid);
     // printf("\nRCM %d\n", ret);
     if(ret <= 0) 
         Rec_Move(x, y, dx, dy); 
     else Rec_Clean(x, y, dx, dy);
+    
+    return (uint8_t)(ret <= 0);
 }
 
 void Rec_Link_All(int16_t x, int16_t y, int16_t strength)

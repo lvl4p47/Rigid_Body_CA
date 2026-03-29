@@ -12,8 +12,8 @@ void Cell_Destroy(uint32_t id);
 // GENOME
 
 #define GENOME_SIZE 64
-#define MAX_GENOMES 10000
-#define MAX_STEPS 64
+#define MAX_GENOMES 50000
+#define MAX_STEPS 1
 
 typedef enum {
     CMD_NO_OP,
@@ -29,7 +29,9 @@ typedef enum {
     CMD_ROT,
     CMD_MOVE,
     CMD_EAT,
-    CMD_LOOK
+    CMD_LOOK_TYPE,
+    CMD_LOOK_LINK,
+    CMD_DETACH
 } GeneCmd;
 
 typedef struct {

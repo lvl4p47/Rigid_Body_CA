@@ -8,7 +8,7 @@ uint16_t free_g_id;
 
 uint8_t mutation_rate = 1;
 uint8_t starting_material = 1;
-uint8_t starting_energy = 255;
+uint8_t starting_energy = 127;
 
 uint8_t debug_life = 0;
 
@@ -93,7 +93,7 @@ void Cell_Create(int16_t x, int16_t y, uint32_t parent)
     
     Grid_Set(x, y, id, 1);
     
-    tile->material = starting_material;
+    tile->matter = starting_material;
     tile->energy = starting_energy;
     
     if(parent == 0)
@@ -273,6 +273,7 @@ void Cell_Exec(uint32_t id)
     int16_t temp;
     Tile *neighbor;
     Tile *itself = Grid_Get(cell->x, cell->y);
+    uint8_t mask;
     
     int16_t x = cell->x;
     int16_t y = cell->y;
@@ -347,17 +348,19 @@ void Cell_Exec(uint32_t id)
             break;
         case CMD_MULTIPLY:
             *pc = mod(*pc + 1, GENOME_SIZE);
-            neighbor = Grid_Get(x + dx, y + dy);
+            neighbor = Grid_Get(cell->x + dx, cell->y + dy);
+            itself = Grid_Get(cell->x, cell->y);
             
             if(cell->dir == 8)
                 cell->dir = rand() % 8;
-            
-            if(itself->material >= 2 && itself->energy > 0
+            cell->acc = 0;
+            if(itself->matter >= 2 && itself->energy > 0
             && neighbor->type == 0)
             {
                 Cell_Create(x + dx, y + dy, id);
-                itself->material -= 2;
+                itself->matter -= 2;
                 itself->energy--;
+                cell->acc = 1;
             }
             break;
         case CMD_ROT:
@@ -373,42 +376,74 @@ void Cell_Exec(uint32_t id)
             
             if(cell->dir == 8)
                 cell->dir = rand() % 8;
-            move = 1;
+            cell->acc = 0;
+            if(Rec_Push(x, y, dx, dy, 10, 0))
+                cell->acc = 1;
             break;
         case CMD_EAT:
             *pc = mod(*pc + 1, GENOME_SIZE);
-            neighbor = Grid_Get(x + dx, y + dy);
+            neighbor = Grid_Get(cell->x + dx, cell->y + dy);
+            itself = Grid_Get(cell->x, cell->y);
             
             if(cell->dir == 8)
                 cell->dir = rand() % 8;
             
+            cell->acc = 0;
             if(neighbor->type != 0 && neighbor != itself)
             {
-                temp = itself->material + neighbor->material;
+                temp = itself->matter + neighbor->matter;
                 if(temp < 255)
                 {
-                    itself->material = temp;
-                    neighbor->material = 0;
+                    itself->matter = temp;
+                    neighbor->matter = 0;
+                    cell->acc += 1;
                 }
                 temp = itself->energy + neighbor->energy;
                 if(temp < 255)
                 {
                     itself->energy = temp;
                     neighbor->energy = 0;
+                    cell->acc += 1;
                 }
-                if(neighbor->material == 0 && neighbor->energy == 0)
+                temp = itself->matter + 1;
+                if(neighbor->matter == 0 && neighbor->energy == 0
+                && temp < 255)
                 {
                     if(neighbor->id != 0)
                         Cell_Destroy(neighbor->id);
                     Grid_Set(x + dx, y + dy, 0, 0);
+                    itself->matter = temp;
+                    cell->acc += 1;
                 }
             }
             break;
-        case CMD_LOOK:
+        case CMD_LOOK_TYPE:
             *pc = mod(*pc + 1, GENOME_SIZE);
-            neighbor = Grid_Get(x + dx, y + dy);
+            neighbor = Grid_Get(cell->x + dx, cell->y + dy);
+            itself = Grid_Get(cell->x, cell->y);
             
             cell->acc = neighbor->type;
+            break;
+        case CMD_LOOK_LINK:
+            *pc = mod(*pc + 1, GENOME_SIZE);
+            neighbor = Grid_Get(cell->x + dx, cell->y + dy);
+            itself = Grid_Get(cell->x, cell->y);
+            mask = (uint8_t)1 << cell->dir;
+            
+            cell->acc = 0;
+            if(itself->links &= mask)
+                cell->acc = 1;
+            break;
+        case CMD_DETACH:
+            *pc = mod(*pc + 1, GENOME_SIZE);
+            neighbor = Grid_Get(cell->x + dx, cell->y + dy);
+            itself = Grid_Get(cell->x, cell->y);
+            
+            mask = (uint8_t)1 << cell->dir;
+            itself->links &= (uint8_t)~mask;
+            
+            mask = (uint8_t)1 << mod(cell->dir + 4, 8);
+            neighbor->links &= (uint8_t)~mask;
             break;
         
         default:
@@ -419,7 +454,7 @@ void Cell_Exec(uint32_t id)
         if(print) printf("acc %3d\n", cell->acc);
     }
     
-    if(move) Rec_Push(x, y, dx, dy, 10, 1);
+    // if(move) Rec_Push(x, y, dx, dy, 10, 1);
     
     if(itself->energy == 0) Cell_Destroy(id);
 }
