@@ -26,6 +26,7 @@ typedef enum
 
 extern int8_t dir_to_coords[9][2];
 extern uint8_t coords_to_dir[3][3];
+extern uint32_t my_state;
 
 static inline int64_t mod(int64_t x, int64_t m) {
     int64_t r = x % m;
@@ -80,6 +81,10 @@ static inline uint8_t Count_Bits_8(uint8_t x)
 
     return n;
 }
+
+extern uint32_t state;
+
+uint32_t rnd();
 
 // STACK
 

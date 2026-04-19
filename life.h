@@ -6,13 +6,13 @@
 void Cells_Init();
 void Cells_Update();
 uint32_t Find_Free_Id();
-void Cell_Create(int16_t x, int16_t y, uint32_t parent);
+void Cell_Create(int16_t x, int16_t y, uint32_t parent, uint8_t photo);
 void Cell_Destroy(uint32_t id);
 
 // GENOME
 
-#define GENOME_SIZE 64
-#define MAX_GENOMES 50000
+#define GENOME_SIZE 255
+#define MAX_GENOMES 60000
 #define MAX_STEPS 1
 
 typedef enum {
@@ -25,13 +25,23 @@ typedef enum {
     CMD_POP,
     CMD_ADD_POP,
     CMD_SUB_POP,
+    CMD_CMP_POP,
     CMD_MULTIPLY,
     CMD_ROT,
+    CMD_CENTRE,
     CMD_MOVE,
     CMD_EAT,
     CMD_LOOK_TYPE,
     CMD_LOOK_LINK,
-    CMD_DETACH
+    CMD_LOOK_MEMB,
+    CMD_LOOK_MAT,
+    CMD_LOOK_NRG,
+    CMD_LOOK_ACC,
+    CMD_DETACH,
+    CMD_ATTACH,
+    CMD_SET_PHERO,
+    CMD_GET_PHERO,
+    CMD_COUNT
 } GeneCmd;
 
 typedef struct {
@@ -51,9 +61,12 @@ void Genomes_Print();
 uint16_t Find_Free_Genome_Id();
 uint16_t Genome_Create(uint16_t par_id);
 void Genome_Destroy(uint16_t g_id);
-void Genome_Copy(uint16_t g_id_to, uint16_t g_id_from, uint8_t mut_rate);
+void Genome_Copy(uint16_t g_id_to, uint16_t g_id_from, uint16_t mut_rate);
 
 void Cell_Exec(uint32_t id);
+void Cell_Buf_Upd(uint32_t id);
+void Redist_Energy(uint32_t id);
 int16_t Find_Tag(Genome *genome, uint8_t tag);
+void Populate(int n);
 
 #endif

@@ -3,6 +3,10 @@
 
 #include "utility.h"
 
+#define MAX_PHEROMONES 8
+
+extern uint8_t global_time;
+
 typedef struct {
     uint32_t id;
     uint8_t type;
@@ -10,12 +14,14 @@ typedef struct {
     uint8_t energy;
     int16_t rec_str;
     uint8_t links;
+    
+    uint8_t pheromone[MAX_PHEROMONES][3];
 } Tile;
 
 extern uint16_t grid_width;
 extern uint16_t grid_height;
 
-extern uint8_t timer;
+extern uint16_t timer;
 extern Tile **grid_array;
 
 typedef enum
@@ -28,7 +34,8 @@ typedef enum
 
 void Grid_Init(uint16_t w, uint16_t h);
 void Grid_Quit();
-void Grid_Reset();
+void Grid_Reset(uint8_t type, uint16_t chance);
+void Grid_Reset_Half(uint8_t type, uint16_t chance);
 
 static inline Tile* Grid_Get(int16_t x, int16_t y)
 {
@@ -47,18 +54,28 @@ void Rec_Clean(int16_t x, int16_t y, int8_t dx, int8_t dy);
 uint8_t Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength, uint8_t rigid);
 void Rec_Link_All(int16_t x, int16_t y, int16_t strength);
 void Rec_Connect(int16_t x, int16_t y, int16_t strength);
+uint8_t Is_Membrane(int16_t x, int16_t y);
+uint8_t Neighbor_Energy(int16_t x, int16_t y);
+
+void Global_Time_Update();
+void Phero_Set(int16_t x, int16_t y, uint8_t type, uint8_t range);
+uint8_t Phero_Get(int16_t x, int16_t y, uint8_t type, uint8_t update);
 
 // CELLS
 
-#define MAX_CELLS 100000
+#define MAX_CELLS 600000
 
 typedef struct {
     uint16_t x;
     uint16_t y;
+    uint8_t buf_matter;
+    uint8_t buf_energy;
     uint8_t dir;
+    uint8_t photo;
     
     uint32_t prev;
     uint32_t next;
+    uint32_t parent;
     
     uint8_t used;
     uint16_t g_id;

@@ -20,7 +20,15 @@ void Events_Handle()
         {
             if(e.key.keysym.sym == SDLK_q)
             {
-                
+                display_mode = mod(display_mode - 1, DISP_MODE_COUNT);
+            }
+            if(e.key.keysym.sym == SDLK_w)
+            {
+                display_mode = mod(display_mode + 1, DISP_MODE_COUNT);
+            }
+            if(e.key.keysym.sym == SDLK_p)
+            {
+                Populate(10000);
             }
             if(e.key.keysym.sym == SDLK_ESCAPE)
             {
@@ -44,10 +52,11 @@ void Events_Handle()
             if (e.button.button == SDL_BUTTON_LEFT) 
             {
                 lmb_held = 1;
+                // Phero_Set(x, y, 0, 50);
             }
             if (e.button.button == SDL_BUTTON_MIDDLE) 
             {
-                Rec_Push(x, y, 1, 0, 10, 1);
+                // Rec_Push(x, y, 1, 0, 10, 1);
             }
         }
         if (e.type == SDL_MOUSEBUTTONUP) {
@@ -69,11 +78,40 @@ void Events_Handle()
 
             if (rmb_held == 1)
             {
-                Cell_Create(x, y, 0);
+                int rad = grid_height / 8;
+                int amount = rad / 16;
+                int perc = 2 * rad;
+                int dx, dy;
+                for(int n = 0; n < amount; n++)
+                {
+                    dx = rand() % (2 * rad) - rad;
+                    dy = rand() % (2 * rad) - rad;
+                    
+                    if((rand() % perc + rand() % perc) / 2 > abs(dx) + abs(dy)
+                    && Grid_Get(x + dx, y + dy)->id == 0)
+                        Grid_Set(x + dx, y + dy, 0, 1);
+                }
             }
             if (lmb_held == 1)
             {
-                Cell_Destroy(Grid_Get(x, y)->id);
+                // if(Find_Free_Genome_Id() != 0)
+                // {
+                //     int rad = grid_height / 8;
+                //     int amount = rad / 16;
+                //     int perc = 2 * rad;
+                    
+                //     int dx, dy;
+                //     for(int n = 0; n < amount; n++)
+                //     {
+                //         dx = rand() % (2 * rad) - rad;
+                //         dy = rand() % (2 * rad) - rad;
+                        
+                //         if((rand() % perc + rand() % perc) / 2 > abs(dx) + abs(dy))
+                //             Cell_Create(x + dx, y + dy, 0, rand() % 2);
+                //     }
+                // }
+                
+                Phero_Set(x, y, 0, 255);
             }
         }
     }

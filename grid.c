@@ -4,11 +4,13 @@ Tile **grid_array = NULL;
 uint16_t grid_width = 0;
 uint16_t grid_height = 0;
 
-uint8_t timer = 0;
+uint16_t timer = 0;
 uint8_t debug = 0;
 
 FILE *file_ptr;
 uint16_t integer;
+
+uint8_t global_time = 0;
 
 void Grid_Init(uint16_t w, uint16_t h)
 {
@@ -22,7 +24,8 @@ void Grid_Init(uint16_t w, uint16_t h)
         grid_array[i] = (Tile*)malloc(w * sizeof(Tile));
     }
     
-    Grid_Reset(0);
+    Grid_Reset(0, 1000);
+    Grid_Reset(1, 50);
 }
 
 void Grid_Quit()
@@ -35,14 +38,28 @@ void Grid_Quit()
     free(grid_array);
 }
 
-void Grid_Reset()
+void Grid_Reset(uint8_t type, uint16_t chance)
 {
     if(debug) fprintf(stderr, "\nGrid_Reset"), fflush(stderr);
     for(int i = 0; i < grid_height; i++)
     {
         for(int j = 0; j < grid_width; j++)
         {
-            Grid_Set(j, i, 0, 0);
+            if(rand() % 1000 < chance)
+                Grid_Set(j, i, 0, type);
+        }
+    }
+}
+
+void Grid_Reset_Half(uint8_t type, uint16_t chance)
+{
+    if(debug) fprintf(stderr, "\nGrid_Reset"), fflush(stderr);
+    for(int i = grid_height / 2; i < grid_height; i++)
+    {
+        for(int j = 0; j < grid_width; j++)
+        {
+            if(rand() % 1000 < chance)
+                Grid_Set(j, i, 0, type);
         }
     }
 }
@@ -59,6 +76,8 @@ void Grid_Set(int16_t x, int16_t y, uint32_t id, uint8_t type)
     grid_array[y1][x1].energy = 0;
     grid_array[y1][x1].rec_str = 0;
     grid_array[y1][x1].links = 0;
+    
+    if(id == 0 && type == 1) grid_array[y1][x1].matter = 254;
 }
 
 void Grid_Move(int16_t x, int16_t y, int16_t dx, int16_t dy)
@@ -98,7 +117,19 @@ void Grid_Update()
         freopen("debug.log", "w", stderr);
         fprintf(stderr, "\nGrid_Update"), fflush(stderr);
     }
+    Tile *tile;
     
+    for(int i = 0; i < grid_height; i++)
+    {
+        for(int j = 0; j < grid_width; j++)
+        {
+            tile = Grid_Get(j, i);
+            for(int type = 0; type < MAX_PHEROMONES; type++)
+            {
+                Phero_Get(j, i, type, 1);
+            }
+        }
+    }
 }
 
 int8_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength, uint8_t rigid)
@@ -399,4 +430,129 @@ void Rec_Connect(int16_t x, int16_t y, int16_t strength)
 {
     Rec_Link_All(x, y, strength);
     Rec_Clean(x, y, 1, 0);
+}
+
+uint8_t Is_Membrane(int16_t x, int16_t y)
+{
+    uint8_t counter = 0;
+    
+    int16_t dx, dy;
+    Tile *neighbor;
+    for(int dir = 0; dir < 8; dir++)
+    {
+        dx = dir_to_coords[dir][0];
+        dy = dir_to_coords[dir][1];
+        neighbor = Grid_Get(x + dx, y + dy);
+        
+        if(neighbor->type == 0) counter++;
+    }
+    return counter;
+}
+
+uint8_t Neighbor_Energy(int16_t x, int16_t y)
+{
+    uint8_t counter = 0;
+    
+    int16_t dx, dy;
+    Tile *neighbor;
+    for(int dir = 0; dir < 8; dir++)
+    {
+        dx = dir_to_coords[dir][0];
+        dy = dir_to_coords[dir][1];
+        neighbor = Grid_Get(x + dx, y + dy);
+        counter += neighbor->energy;
+    }
+    return counter;
+}
+
+void Global_Time_Update()
+{
+    global_time += 1;
+    // printf("time %3d\n", global_time);
+    
+    if(global_time == 0 || global_time == 127)
+    {
+        Grid_Update();
+    }
+    
+    // if(global_time == 250)
+    // {
+    //     Phero_Set(100, 100, 0, 255);
+    // }
+    
+    // if(global_time == 120)
+    // {
+    //     Phero_Set(110, 100, 0, 255);
+    // }
+}
+
+void Phero_Set(int16_t x, int16_t y, uint8_t type, uint8_t range)
+{
+    Tile *tile;
+    uint32_t dist;
+    uint16_t time;
+    uint8_t root = fast_root(range);
+    
+    for(int dy = -root; dy <= root; dy++)
+    {
+        for(int dx = -root; dx <= root; dx++)
+        {
+            tile = Grid_Get(x + dx, y + dy);
+            dist = max(abs(dx), abs(dy));
+            if(dist > root) continue;
+            dist = abs(dx) * abs(dx) + abs(dy) * abs(dy);
+            if(dist >= range) continue;
+            
+            time = global_time + range - dist;
+            
+            if(
+                (range - dist) > Phero_Get(x + dx, y + dy, type, 0)
+            )
+            {
+                tile->pheromone[type][0] = global_time;
+                tile->pheromone[type][1] = time;
+                tile->pheromone[type][2] = 1;
+            }
+        }
+    }
+}
+
+uint8_t Phero_Get(int16_t x, int16_t y, uint8_t type, uint8_t update)
+{
+    Tile *tile = Grid_Get(x, y);
+    
+    if(tile->pheromone[type][2] == 0) return 0;
+    
+    uint8_t start_time = tile->pheromone[type][0];
+    uint8_t end_time = tile->pheromone[type][1];
+    uint8_t conc = 0;
+    
+    if(start_time > end_time)
+    {
+        
+        if(end_time >= global_time || start_time <= global_time)
+        {
+            conc = (end_time - start_time - 256) - global_time + start_time - 256;
+            if(update) tile->pheromone[type][0] = global_time;
+        }
+        
+    }
+    else
+    {
+        if(end_time >= global_time && start_time <= global_time)
+        {
+            conc = (end_time - start_time) - global_time + start_time;
+            if(update) tile->pheromone[type][0] = global_time;
+        }
+    }
+    if(conc == 0
+    && update
+    )
+    {
+        tile->pheromone[type][0] = 0;
+        tile->pheromone[type][1] = 0;
+        tile->pheromone[type][2] = 0;
+    }
+    
+    return conc;
 }

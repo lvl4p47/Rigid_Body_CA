@@ -20,6 +20,8 @@ uint8_t coords_to_dir[3][3] =
     {6, 5, 4}
 };
 
+uint32_t state;
+
 int min(int a, int b)
 {
     if(a < b) return a;
@@ -50,6 +52,13 @@ float power(int a, int n)
         }
     }
     return ans;
+}
+
+uint32_t rnd() {
+    state ^= state >> 12;
+    state ^= state << 25;
+    state ^= state >> 27;
+    return state * 0x510E527f;
 }
 
 // STACK
