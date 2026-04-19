@@ -6,7 +6,7 @@
 void Cells_Init();
 void Cells_Update();
 uint32_t Find_Free_Id();
-void Cell_Create(int16_t x, int16_t y, uint32_t parent, uint8_t photo);
+void Cell_Create(int16_t x, int16_t y, uint32_t parent, uint8_t photo, uint8_t out_in);
 void Cell_Destroy(uint32_t id);
 
 // GENOME
@@ -39,6 +39,8 @@ typedef enum {
     CMD_LOOK_ACC,
     CMD_DETACH,
     CMD_ATTACH,
+    CMD_OUTLET_OFF,
+    CMD_OUTLET_ON,
     CMD_SET_PHERO,
     CMD_GET_PHERO,
     CMD_COUNT
@@ -68,5 +70,6 @@ void Cell_Buf_Upd(uint32_t id);
 void Redist_Energy(uint32_t id);
 int16_t Find_Tag(Genome *genome, uint8_t tag);
 void Populate(int n);
+void Force_Multiply();
 
 #endif

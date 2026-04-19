@@ -21,7 +21,7 @@ typedef struct {
 extern uint16_t grid_width;
 extern uint16_t grid_height;
 
-extern uint16_t timer;
+extern uint8_t timer;
 extern Tile **grid_array;
 
 typedef enum
@@ -70,6 +70,7 @@ typedef struct {
     uint16_t y;
     uint8_t buf_matter;
     uint8_t buf_energy;
+    uint8_t outlet;
     uint8_t dir;
     uint8_t photo;
     

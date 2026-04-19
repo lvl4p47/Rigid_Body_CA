@@ -4,8 +4,9 @@
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
 
-uint8_t draw_links = 0;
-uint8_t display_mode = PHERO;
+uint8_t draw_links = 1;
+uint8_t display_mode = TROPHS;
+uint32_t prev_matter = 0;
 
 
 void Graphics_Init()
@@ -94,7 +95,10 @@ void Grid_Draw()
                 SDL_RenderFillRect(renderer, &rect);
             }
         }
-        printf("total_matter %d\n", total_matter);
+        
+        // printf("total_matter %d\n", total_matter);
+        // if(total_matter != prev_matter && prev_matter != 0) printf("%d\n", 1 / 0);
+        prev_matter = total_matter;
         break;
     case TROPHS:
         for(uint32_t id = 1; id < MAX_CELLS; id++)
@@ -110,6 +114,7 @@ void Grid_Draw()
                 int photo = cells[id].photo;
                 int str = tile->rec_str;
                 uint8_t links = tile->links;
+                // links = cells[tile->id].outlet;
                 int r = 0, g = 0, b = 0;
                     
                 switch (type)
@@ -132,10 +137,32 @@ void Grid_Draw()
                 rect.x = x * CELL_SIZE;
                 rect.y = y * CELL_SIZE;
                 
+                if(draw_links == 1 && 0)
+                {
+                    r = 0, g = 0, b = 0;
+                }
+                
                 SDL_SetRenderDrawColor(renderer, r, g, b, 255);
                 SDL_RenderFillRect(renderer, &rect);
                 
                 if(draw_links == 0) continue;
+                
+                switch (type)
+                {
+                case 0:
+                    
+                    break;
+                
+                default:
+                    r = 0, g = 0, b = energy;
+                    if(id != 0)
+                    {
+                        if(photo)
+                            g = 255;
+                        else r = 255;
+                    }
+                    break;
+                }
                 
                 SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
                 uint8_t mask;

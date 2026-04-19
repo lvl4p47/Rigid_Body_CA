@@ -6,7 +6,7 @@ Genome genomes[MAX_GENOMES];
 uint32_t free_id;
 uint16_t free_g_id;
 
-uint16_t mutation_rate = 50;
+uint16_t mutation_rate = 200;
 uint16_t mutation_max = 1000;
 uint8_t starting_matter = 1;
 uint8_t starting_energy = 127;
@@ -15,11 +15,16 @@ uint8_t req_energy = 127;
 
 uint8_t debug_life = 0;
 uint8_t dynamic_rules = 0;
+uint8_t force_mult = 0;
+uint8_t repopulate = 0;
 
 uint32_t next_id;
 uint32_t population_size;
 uint32_t lifetime = 1;
 uint8_t eat_div = 1;
+uint8_t life = 0;
+
+uint8_t force_mult_mode = 0;
 
 void Cells_Init()
 {
@@ -27,6 +32,9 @@ void Cells_Init()
     {
         cells[id].x = 0;
         cells[id].y = 0;
+        cells[id].buf_energy = 0;
+        cells[id].buf_matter = 0;
+        cells[id].outlet = 0;
         cells[id].dir = 8;
         cells[id].photo = 0;
         cells[id].prev = 0;
@@ -91,11 +99,31 @@ void Cells_Update()
     }
     while(id != 0);
     
+    if(population_size < 1000)
+    {
+        if((population_size == 0 || force_mult == 0)
+        && repopulate) Populate(1000);
+        else if(force_mult == 1)
+        {
+            Grid_Reset(0, 500);
+            force_mult_mode = 1;
+        }
+    }
+    
+    if(force_mult)
+    {
+        if(force_mult_mode == 1)
+        {
+            Force_Multiply();
+            if(population_size > 50000) force_mult_mode = 0;
+        }
+        // printf("population_size %6d force_mult_mode %d\n", population_size, force_mult_mode);
+    }
     if(dynamic_rules)
     {
         lifetime = max(MAX_CELLS / (4 * population_size + MAX_CELLS / 1024) - 10, 1);
         mutation_rate = lifetime / 4;
-        printf("population_size %d mutation_rate %d lifetime %d\n", population_size, mutation_rate, lifetime);
+        // printf("population_size %d mutation_rate %d lifetime %d\n", population_size, mutation_rate, lifetime);
     }
 }
 
@@ -119,7 +147,7 @@ uint32_t Find_Free_Id()
     }
 }
 
-void Cell_Create(int16_t x, int16_t y, uint32_t parent, uint8_t photo)
+void Cell_Create(int16_t x, int16_t y, uint32_t parent, uint8_t photo, uint8_t out_in)
 {
     if(debug_life) fprintf(stderr, "Cell_Create\n"), fflush(stderr);
     
@@ -174,8 +202,9 @@ void Cell_Create(int16_t x, int16_t y, uint32_t parent, uint8_t photo)
     
     cells[id].x = mod(x, grid_width);
     cells[id].y = mod(y, grid_height);
-    cells[id].buf_energy = tile->energy;
-    cells[id].buf_matter = tile->matter;
+    cells[id].buf_energy = 0;
+    cells[id].buf_matter = 0;
+    cells[id].outlet = 0;
     cells[id].dir = cells[parent].dir;
     cells[id].photo = photo;
     cells[id].prev = cells[parent].prev;
@@ -200,11 +229,20 @@ void Cell_Create(int16_t x, int16_t y, uint32_t parent, uint8_t photo)
     int16_t dy = dir_to_coords[opp][1];
     Tile *new = Grid_Get(x, y);
     Tile *par = Grid_Get(cells[parent].x, cells[parent].y);
+    
     uint8_t mask_dir = (uint8_t)1 << dir;
     uint8_t mask_opp = (uint8_t)1 << opp;
     
     par->links |= mask_dir;
     new->links |= mask_opp;
+    if(out_in == 0)
+    {
+        par_cell->outlet |= mask_dir;
+    }
+    else
+    {
+        new_cell->outlet |= mask_opp;
+    }
 }
 
 void Cell_Destroy(uint32_t id)
@@ -233,14 +271,21 @@ void Cell_Destroy(uint32_t id)
         mask = (uint8_t)1 << mod(dir + 4, 8);
         
         neighbor->links &= (uint8_t)~mask;
+        cells[neighbor->id].outlet &= (uint8_t)~mask;
     }
     
     genomes[cells[id].g_id].used--;
     
     if(genomes[cells[id].g_id].used == 0) Genome_Destroy(cells[id].g_id);
     
+    tile->energy += cells[id].buf_energy;
+    tile->matter += cells[id].buf_matter;
+    
     cells[id].x = 0;
     cells[id].y = 0;
+    cells[id].buf_energy = 0;
+    cells[id].buf_matter = 0;
+    cells[id].outlet = 0;
     cells[id].dir = 8;
     cells[id].photo = 0;
     cells[id].prev = 0;
@@ -386,21 +431,16 @@ void Cell_Exec(uint32_t id)
     
     int8_t photo_threshold = -1;
     uint8_t how_open = Is_Membrane(x, y);
-    // how_open = min(Is_Membrane(x, y), Count_Bits_8(itself->links) + 1);
     
-    // if(rand() % 11 >= how_open + 1) return;
-    
-    if(rand() % lifetime == 0)
+    if(rand() % lifetime == 0 && life)
     {
         if(cell->photo == 0)
             itself->energy = max(itself->energy - 1, 0);
-        if(cell->photo == 1 && how_open > photo_threshold)
+        if(cell->photo == 1)
             itself->energy = min(itself->energy + 1, 255);
-        else if(cell->photo == 1)
-            itself->energy = max(itself->energy - 1, 0);
     }
     
-    for(int steps = 0; steps < MAX_STEPS; steps++)
+    for(int steps = MAX_STEPS * life; steps < MAX_STEPS; steps++)
     {
         gene = &genome->genes[*pc];
         
@@ -480,14 +520,14 @@ void Cell_Exec(uint32_t id)
             {
                 cell->acc = 0;
                 
-                if(itself->matter > req_matter + 1
+                if(itself->matter >= req_matter + 1
                 && itself->energy >= 2)
                 {
                     if(neighbor->matter == 0
                     && neighbor->energy == 0
                     && neighbor->type == 0)
                     {
-                        Cell_Create(x + dx, y + dy, id, gene->arg % 2);
+                        Cell_Create(x + dx, y + dy, id, (gene->arg >> 0) & 1, (gene->arg >> 1) & 1);
                         cell->acc += 1;
                     }
                 }
@@ -513,8 +553,9 @@ void Cell_Exec(uint32_t id)
             if(dx != 0 && dy != 0
             && rand() % 1000 > 707) break; 
             
-            if(cell->dir != 8)
+            if(cell->dir != 8 && itself->energy > temp)
             {
+                itself->energy -= temp;
                 cell->acc = 0;
                 if(Rec_Push(cell->x, cell->y, dx, dy, temp, 0))
                 {
@@ -565,6 +606,7 @@ void Cell_Exec(uint32_t id)
                     itself->matter += neighbor->matter;
                     neighbor->matter = 0;
                 }
+                
                 if(cell->photo == 0)
                 {
                     if(neighbor->energy >= read && itself->energy < 255 - read / eat_div)
@@ -587,9 +629,10 @@ void Cell_Exec(uint32_t id)
                 
                 temp = itself->matter + 1;
                 if(neighbor->matter == 0 && neighbor->energy == 0
+                && neighbor->type != 0
                 && temp < 256)
                 {
-                    if(neighbor->id != 0)
+                    if(neighbor->id != 0 && cells[neighbor->id].used)
                     {
                         Cell_Destroy(neighbor->id);
                         next_id = cell->next;
@@ -671,8 +714,9 @@ void Cell_Exec(uint32_t id)
                 if(neighbor->links & mask)
                 {
                     neighbor->links &= (uint8_t)~mask;
-                    cells[neighbor->id].parent = 0;
                 }
+                if(cell->outlet & mask)
+                    cell->outlet &= (uint8_t)~mask;
             }
             break;
         case CMD_ATTACH:
@@ -688,7 +732,39 @@ void Cell_Exec(uint32_t id)
                 
                 mask = (uint8_t)1 << mod(cell->dir + 4, 8);
                 neighbor->links |= mask;
-                cells[neighbor->id].parent = id;
+            }
+            break;
+        case CMD_OUTLET_OFF:
+            break;
+            dx = dir_to_coords[cell->dir][0];
+            dy = dir_to_coords[cell->dir][1];
+            neighbor = Grid_Get(cell->x + dx, cell->y + dy);
+            itself = Grid_Get(cell->x, cell->y);
+            
+            if(cell->dir != 8)
+            {
+                mask = (uint8_t)1 << cell->dir;
+                if(cell->outlet & mask)
+                    cell->outlet &= (uint8_t)~mask;
+            }
+            break;
+        case CMD_OUTLET_ON:
+            dx = dir_to_coords[cell->dir][0];
+            dy = dir_to_coords[cell->dir][1];
+            neighbor = Grid_Get(cell->x + dx, cell->y + dy);
+            itself = Grid_Get(cell->x, cell->y);
+            temp = gene->arg % 2;
+            
+            if(neighbor->id != 0 && cell->dir != 8)
+            {
+                mask = (uint8_t)1 << cell->dir;
+                itself->links |= mask;
+                
+                mask = (uint8_t)1 << mod(cell->dir + 4, 8);
+                neighbor->links |= mask;
+            
+                mask = (uint8_t)1 << cell->dir;
+                cell->outlet |= mask;
             }
             break;
         case CMD_SET_PHERO:
@@ -719,14 +795,12 @@ void Cell_Exec(uint32_t id)
         neighbor = Grid_Get(x + dx, y + dy);
         itself = Grid_Get(x, y);
         
-        if(itself->energy == 0 
-        || itself->energy == 255
-        ) Cell_Destroy(id), steps = MAX_STEPS;
+        // if(itself->energy == 0 
+        // || itself->energy == 255
+        // ) Cell_Destroy(id), steps = MAX_STEPS;
         
         if(print) fprintf(stderr, "acc %3d\n", cell->acc);
     }
-    cell->buf_matter = itself->matter;
-    cell->buf_energy = itself->energy;
 }
 
 void Cell_Buf_Upd(uint32_t id)
@@ -743,12 +817,14 @@ void Cell_Buf_Upd(uint32_t id)
     Cell *cell = &cells[id];
     Tile *itself = Grid_Get(cell->x, cell->y);
     
-    itself->matter = cell->buf_matter;
-    itself->energy = cell->buf_energy;
+    itself->matter += cell->buf_matter;
+    itself->energy += cell->buf_energy;
+    cell->buf_matter = 0;
+    cell->buf_energy = 0;
         
-    if(itself->energy == 0 
-    || itself->energy == 255
-    ) Cell_Destroy(id);
+    // if(itself->energy == 0 
+    // || itself->energy == 255
+    // ) Cell_Destroy(id);
 }
 
 void Redist_Energy(uint32_t id)
@@ -781,25 +857,18 @@ void Redist_Energy(uint32_t id)
         neighbor = Grid_Get(x + dx, y + dy);
         cell_n = &cells[neighbor->id];
         
-        if(cells[neighbor->id].parent == id
-        && cells[neighbor->id].photo == cell->photo
-        && itself->links & mask
-        && neighbor->type != 0)
+        if(cell->outlet & mask
+        && neighbor->id != 0)
         {
             neighbor_amount++;
         }
     }
     
-    if(cell->photo)
     {
         desired_energy = -cell->buf_energy;
-        desired_matter = -sign(cell->buf_matter);
+        desired_matter = -cell->buf_matter;
     }
-    else
-    {
-        desired_energy = 254 - cell->buf_energy;
-        desired_matter = -sign(cell->buf_matter);
-    }
+    
     if(neighbor_amount == 0) return;
     
     spread_energy = desired_energy / neighbor_amount;
@@ -813,10 +882,8 @@ void Redist_Energy(uint32_t id)
         neighbor = Grid_Get(x + dx, y + dy);
         cell_n = &cells[neighbor->id];
         
-        if(cells[neighbor->id].parent == id
-        && cells[neighbor->id].photo == cell->photo
-        && itself->links & mask
-        && neighbor->type != 0)
+        if(cell->outlet & mask
+        && neighbor->id != 0)
         {
             res_energy = cell_n->buf_energy - spread_energy;
             res_matter = cell_n->buf_matter - spread_matter;
@@ -848,10 +915,13 @@ void Redist_Energy(uint32_t id)
             s_ediff = (ediff);
             s_mdiff = (mdiff);
             
-            cell->buf_energy += s_ediff;
-            neighbor->energy -= s_ediff;
-            cell->buf_matter += s_mdiff;
-            neighbor->matter -= s_mdiff;
+            if(life)
+            {
+                cell->buf_energy += s_ediff;
+                neighbor->energy -= s_ediff;
+                cell->buf_matter += s_mdiff;
+                neighbor->matter -= s_mdiff;
+            }
         }
     }
 }
@@ -890,18 +960,59 @@ int16_t Find_Tag(Genome *genome, uint8_t tag)
 
 void Populate(int n)
 {
-    if(Find_Free_Genome_Id() != 0)
+    Tile *tile;
+    for(int y = 0; y < grid_height; y++)
     {
-        int amount = n;
-        
-        int dx, dy;
-        for(int n = 0; n < amount; n++)
+        for(int x = 0; x < grid_width; x++)
         {
-            dx = rand() % grid_width;
-            dy = rand() % grid_height;
-            
-            if(Grid_Get(dx, dy)->type == 0)
-                Cell_Create(dx, dy, 0, rand() % 2);
+            if(rand() % 10000 < n)
+            {
+                if(Find_Free_Genome_Id() != 0)
+                {
+                    tile = Grid_Get(x, y);
+                    if(cells[tile->id].used && tile->id)
+                    {
+                        Cell_Destroy(tile->id);
+                    }
+                    Grid_Set(x, y, 0, 0);
+                    Cell_Create(x, y, 0, rand() % 2, 0);
+                }
+            }
         }
     }
+}
+
+void Force_Multiply()
+{
+    Tile *neighbor, *itself;
+    uint32_t id = 0;
+    next_id = 0;
+    int dx;
+    int dy;
+    do
+    {
+        next_id = cells[id].next;
+        if(cells[id].used)
+        {
+            dx = dir_to_coords[cells[id].dir][0];
+            dy = dir_to_coords[cells[id].dir][1];
+            itself = Grid_Get(cells[id].x, cells[id].y);
+            neighbor = Grid_Get(cells[id].x + dx, cells[id].y + dy);
+            if(itself->matter > req_matter + 1
+            && itself->energy >= 2
+            && neighbor->matter == 0
+            && neighbor->energy == 0
+            && neighbor->type == 0
+            )
+                Cell_Create(cells[id].x + dx, cells[id].y + dy, id, cells[id].photo, rand() % 2);
+            else
+            {
+                Grid_Get(cells[id].x, cells[id].y)->matter = req_matter + 10;
+                Grid_Get(cells[id].x, cells[id].y)->energy = req_energy + 10;
+            }
+        }
+    
+        id = next_id;
+    }
+    while(id != 0);
 }

@@ -17,14 +17,12 @@ int main(int argc, char* args[])
         Events_Handle();
         
         Cells_Update();
-        
-        // Genomes_Print();
 
         if(display_mode == TROPHS
         || display_mode == GENOMES
         || display_mode == ACC
-        // || display_mode == PHERO
-        || global_time % 100 == 0)
+        // || display_mode == ENERGY
+        || timer == 0)
         {
             Screen_Clear();
             Screen_Draw();

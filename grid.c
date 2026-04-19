@@ -4,7 +4,7 @@ Tile **grid_array = NULL;
 uint16_t grid_width = 0;
 uint16_t grid_height = 0;
 
-uint16_t timer = 0;
+uint8_t timer = 0;
 uint8_t debug = 0;
 
 FILE *file_ptr;
@@ -25,7 +25,7 @@ void Grid_Init(uint16_t w, uint16_t h)
     }
     
     Grid_Reset(0, 1000);
-    Grid_Reset(1, 50);
+    // Grid_Reset(1, 100);
 }
 
 void Grid_Quit()
@@ -138,6 +138,10 @@ int8_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength
     
     Tile *center = Grid_Get(x, y);
     Tile *neighbor;
+    
+    Cell *itself = &cells[center->id];
+    Cell *other;
+    
     int8_t problems = 0;
     int8_t ret;
     
@@ -188,6 +192,7 @@ int8_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength
     int16_t Dx, Dy;
     int16_t nx, ny;
     uint8_t mask, opposite;
+    uint8_t is_outlet, is_outlet_n;
     for(uint8_t dir = 0; dir < 8; dir++)
     {
         mask = (uint8_t)1 << dir;
@@ -197,6 +202,7 @@ int8_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength
         nx = x + Dx;
         ny = y + Dy;
         neighbor = Grid_Get(nx, ny);
+        other = &cells[neighbor->id];
         
         if(neighbor->type != 0
         && (neighbor->rec_str < strength - 1
@@ -211,7 +217,7 @@ int8_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength
                 
                 if(rigid == 0)
                 {
-                    if(ret > 0 && strength == 1)
+                    if(ret > 0 && strength == 1 && problems - ret <= 0)
                     {
                         if(max(abs(nx - x - dx), abs(ny - y - dy)) < 2)
                         {
@@ -221,22 +227,42 @@ int8_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength
                             
                             if(local_debug) printf("c %d n %d\n", center->links, neighbor->links);
                             
-                            center->links &= (uint8_t)~mask;
-                            neighbor->links &= (uint8_t)~opposite;
+                            // center->links &= (uint8_t)~mask;
+                            // is_outlet = 0;
+                            // if(itself->outlet & mask)
+                            // {
+                            //     is_outlet = 1;
+                            //     itself->outlet &= (uint8_t)~mask;
+                            // }
+                            // neighbor->links &= (uint8_t)~opposite;
+                            // is_outlet_n = 0;
+                            // if(other->outlet & opposite)
+                            // {
+                            //     is_outlet_n = 1;
+                            //     other->outlet &= (uint8_t)~opposite;
+                            // }
                             
-                            if(local_debug) printf("c %d n %d\n", center->links, neighbor->links);                         
+                            // if(local_debug) printf("c %d n %d\n", center->links, neighbor->links);                         
                             
-                            uint8_t new_dir = coords_to_dir[Dy - dy + 1][Dx - dx + 1];
-                            if(local_debug) printf("dx %d dy %d\n", Dx - dx + 1, Dy - dy + 1);
-                            if(local_debug) printf("new dir %d\n", new_dir);
+                            // uint8_t new_dir = coords_to_dir[Dy - dy + 1][Dx - dx + 1];
+                            // if(local_debug) printf("dx %d dy %d\n", Dx - dx + 1, Dy - dy + 1);
+                            // if(local_debug) printf("new dir %d\n", new_dir);
                             
-                            mask = (uint8_t)1 << new_dir;
-                            opposite = (uint8_t)1 << mod(new_dir + 4, 8);
+                            // mask = (uint8_t)1 << new_dir;
+                            // opposite = (uint8_t)1 << mod(new_dir + 4, 8);
                             
-                            if(local_debug) printf("m %d o %d\n", mask, opposite);
+                            // if(local_debug) printf("m %d o %d\n", mask, opposite);
                             
-                            center->links |= mask;
-                            neighbor->links |= opposite;
+                            // center->links |= mask;
+                            // if(is_outlet)
+                            // {
+                            //     itself->outlet |= mask;
+                            // }
+                            // neighbor->links |= opposite;
+                            // if(is_outlet_n)
+                            // {
+                            //     other->outlet |= opposite;
+                            // }
                             
                             if(local_debug) printf("c %d n %d\n", center->links, neighbor->links);
                         }
@@ -296,8 +322,65 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy)
     else if(neighbor->type != 0)
         problems = 1;
         
+    Cell *itself = &cells[center->id];
+    Cell *other;
     if(neighbor->type == 0)
     {
+        int16_t Dx, Dy;
+        int16_t nx, ny;
+        uint8_t mask, opposite;
+        uint8_t is_outlet, is_outlet_n;
+        for(uint8_t dir = 0; dir < 8; dir++)
+        {
+            mask = (uint8_t)1 << dir;
+            opposite = (uint8_t)1 << mod(dir + 4, 8);
+            Dx = dir_to_coords[dir][0];
+            Dy = dir_to_coords[dir][1];
+            nx = x + Dx;
+            ny = y + Dy;
+            neighbor = Grid_Get(nx, ny);
+            other = &cells[neighbor->id];
+            
+            if(center->links & mask
+            && str == 1
+            && neighbor->type != 0
+            && max(abs(nx - x - dx), abs(ny - y - dy)) < 2
+            && 1
+            )
+            {
+                center->links &= (uint8_t)~mask;
+                is_outlet = 0;
+                if(itself->outlet & mask)
+                {
+                    is_outlet = 1;
+                    itself->outlet &= (uint8_t)~mask;
+                }
+                neighbor->links &= (uint8_t)~opposite;
+                is_outlet_n = 0;
+                if(other->outlet & opposite)
+                {
+                    is_outlet_n = 1;
+                    other->outlet &= (uint8_t)~opposite;
+                }
+                
+                uint8_t new_dir = coords_to_dir[Dy - dy + 1][Dx - dx + 1];
+                
+                mask = (uint8_t)1 << new_dir;
+                opposite = (uint8_t)1 << mod(new_dir + 4, 8);
+                
+                center->links |= mask;
+                if(is_outlet)
+                {
+                    itself->outlet |= mask;
+                }
+                neighbor->links |= opposite;
+                if(is_outlet_n)
+                {
+                    other->outlet |= opposite;
+                }
+            }
+        }
+        
         Grid_Move(x, y, dx, dy);
         if(local_debug) printf("x %d y %d str %d moved\n", x, y, str);
         center = Grid_Get(x + dx, y + dy);
@@ -467,23 +550,17 @@ uint8_t Neighbor_Energy(int16_t x, int16_t y)
 
 void Global_Time_Update()
 {
-    global_time += 1;
-    // printf("time %3d\n", global_time);
-    
-    if(global_time == 0 || global_time == 127)
+    timer++;
+    if(timer % 256 == 0)
     {
-        Grid_Update();
+        global_time++;
+        // printf("time %3d\n", global_time);
+        
+        if(global_time == 0 || global_time == 127)
+        {
+            Grid_Update();
+        }
     }
-    
-    // if(global_time == 250)
-    // {
-    //     Phero_Set(100, 100, 0, 255);
-    // }
-    
-    // if(global_time == 120)
-    // {
-    //     Phero_Set(110, 100, 0, 255);
-    // }
 }
 
 void Phero_Set(int16_t x, int16_t y, uint8_t type, uint8_t range)
