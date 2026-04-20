@@ -3,7 +3,10 @@
 int quit = 0;
 int lmb_held = 0;
 int rmb_held = 0;
+int mmb_held = 0;
 SDL_Event e;
+
+int grab_x, grab_y, dest_x, dest_y;
 
 void Events_Handle()
 {
@@ -59,31 +62,18 @@ void Events_Handle()
             {
                 lmb_held = 1;
                 
-                // uint8_t dir = 1;
-                // int dx = dir_to_coords[dir][0];
-                // int dy = dir_to_coords[dir][1];
-                // Tile *neighbor = Grid_Get(x + dx, y + dy);
-                // Tile *itself = Grid_Get(x, y);
-                // Cell *cell = &cells[itself->id];
-                // uint8_t mask;
-                
-                // if(neighbor->id != 0)
-                // {
-                //     mask = (uint8_t)1 << dir;
-                //     itself->links |= mask;
-                    
-                //     mask = (uint8_t)1 << mod(dir + 4, 8);
-                //     neighbor->links |= mask;
-                
-                //     mask = (uint8_t)1 << dir;
-                //     cell->outlet |= mask;
-                // }
-                
                 Rec_Connect(x, y, 3);
             }
             if (e.button.button == SDL_BUTTON_MIDDLE) 
             {
-                Rec_Push(x, y, 1, 0, 2, 0);
+                mmb_held = 1;
+                
+                grab_x = x;
+                grab_y = y;
+                dest_x = x;
+                dest_y = y;
+                
+                // Rec_Push(x, y, 1, 0, 2, 0);
             }
         }
         if (e.type == SDL_MOUSEBUTTONUP) {
@@ -94,6 +84,10 @@ void Events_Handle()
             if (e.button.button == SDL_BUTTON_RIGHT) 
             {
                 rmb_held = 0;
+            }
+            if (e.button.button == SDL_BUTTON_MIDDLE) 
+            {
+                mmb_held = 0;
             }
         }
         if (e.type == SDL_MOUSEMOTION) {
@@ -143,6 +137,28 @@ void Events_Handle()
                 // Phero_Set(x, y, 0, 255);
                 
                 // Grid_Set(x, y, 0, 1);
+            }
+            if (mmb_held == 1)
+            {
+                dest_x = x;
+                dest_y = y;
+                
+                int dx = (dest_x - grab_x);
+                int dy = (dest_y - grab_y);
+                int str = abs(dx) + abs(dy);
+                dx = sign(dx);
+                dy = sign(dy);
+                
+                printf("dest_x %d dest_y %d grab_x %d grab_y %d dx %d dy %d\n", dest_x, dest_y, grab_x, grab_y, dx, dy);
+                
+                if(Grid_Get(grab_x, grab_y)->type != 0 && (dx != 0 || dy != 0) && str > 0)
+                {
+                    if(Rec_Push(grab_x, grab_y, dx, dy, str, 0))
+                    {
+                        grab_x += dx;
+                        grab_y += dy;
+                    }
+                }
             }
         }
     }
