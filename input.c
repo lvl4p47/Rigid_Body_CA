@@ -154,19 +154,41 @@ void Events_Process()
 {
     int dx = (dest_x - grab_x);
     int dy = (dest_y - grab_y);
-    int str = abs(dx) + abs(dy);
     
-    dx = sign(dx);
-    dy = sign(dy);
+    uint8_t ax = abs(dx);
+    uint8_t ay = abs(dy);
+    int8_t sx = sign(dx);
+    int8_t sy = sign(dy);
+    uint8_t w_diag = min(ax, ay);
+    uint8_t w_total = max(ax, ay);
+    uint8_t w_axis = w_total - w_diag;
+    
+    if(w_total != 0)
+    {
+        uint8_t r = rand() % w_total;
+        if (r >= w_diag)
+        {
+            if(ax > ay) 
+            {
+                sy = 0;
+            }
+            else 
+            {
+                sx = 0;
+            }
+        }
+    }
+    
+    int str = ax + ay;
     
     if(Grid_Get(grab_x, grab_y)->type != 0 && str > 0)
     {
-        if(Rec_Push(grab_x, grab_y, dx, dy, str, 0))
+        if(Rec_Push(grab_x, grab_y, sx, sy, str, 0))
         {
             // printf("\ntimer %3d dest_x %d dest_y %d grab_x %d grab_y %d dx %d dy %d str %d\n", timer, dest_x, dest_y, grab_x, grab_y, dx, dy, str);
             
-            grab_x += dx;
-            grab_y += dy;
+            grab_x += sx;
+            grab_y += sy;
         }
     }
 }
