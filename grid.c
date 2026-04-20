@@ -25,7 +25,7 @@ void Grid_Init(uint16_t w, uint16_t h)
     }
     
     Grid_Reset(0, 1000);
-    // Grid_Reset(1, 100);
+    // Grid_Reset_Half(1, 5);
 }
 
 void Grid_Quit()
@@ -54,12 +54,12 @@ void Grid_Reset(uint8_t type, uint16_t chance)
 void Grid_Reset_Half(uint8_t type, uint16_t chance)
 {
     if(debug) fprintf(stderr, "\nGrid_Reset"), fflush(stderr);
-    for(int i = grid_height / 2; i < grid_height; i++)
+    for(int i = grid_height - grid_height * chance / 1000; i < grid_height; i++)
     {
         for(int j = 0; j < grid_width; j++)
         {
-            if(rand() % 1000 < chance)
-                Grid_Set(j, i, 0, type);
+            // if(rand() % 1000 < chance)
+            Grid_Set(j, i, 0, type);
         }
     }
 }
@@ -634,7 +634,7 @@ uint8_t Neighbor_Energy(int16_t x, int16_t y)
 void Global_Time_Update()
 {
     timer++;
-    if(timer % 16 == 0)
+    if(timer % 256 == 0)
     {
         global_time++;
         // printf("time %3d\n", global_time);

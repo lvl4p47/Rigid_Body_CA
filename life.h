@@ -71,5 +71,6 @@ void Redist_Energy(uint32_t id);
 int16_t Find_Tag(Genome *genome, uint8_t tag);
 void Populate(int n);
 void Force_Multiply();
+void Life_Reset();
 
 #endif

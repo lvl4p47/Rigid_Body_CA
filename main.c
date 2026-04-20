@@ -1,5 +1,7 @@
 #include "init.h"
 
+uint64_t prev_tick, cur_tick;
+uint16_t cycles = 0, cps = 0, threshold = 1000;
 
 int main(int argc, char* args[])
 {   
@@ -8,14 +10,19 @@ int main(int argc, char* args[])
     state = (uint32_t)time(NULL);
     
     All_Init();
+    
+    prev_tick = SDL_GetTicks64();
 
     while (!quit) {
-        
         freopen("debug.log", "w", stderr);
+        
+        cycles++;
+        
+        printf("cps %4d ", cps);
         
         Global_Time_Update();
         
-        // Cells_Update();
+        Cells_Update();
         
         Events_Handle();
         
@@ -31,7 +38,17 @@ int main(int argc, char* args[])
         {
             Screen_Clear();
             Screen_Draw();
-            SDL_Delay(1);
+            // SDL_Delay(1);
+        }
+        
+        cur_tick = SDL_GetTicks64();
+        
+        if(cur_tick - prev_tick > threshold)
+        {
+            
+            cps = cycles * 1000 / threshold;
+            cycles = 0;
+            prev_tick = cur_tick;
         }
     }
     

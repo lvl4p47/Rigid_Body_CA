@@ -4,8 +4,8 @@
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
 
-uint8_t draw_links = 1;
-uint8_t display_mode = TROPHS;
+uint8_t draw_links = 0;
+uint8_t display_mode = ENERGY;
 uint32_t prev_matter = 0;
 
 

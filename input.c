@@ -31,7 +31,7 @@ void Events_Handle()
             }
             if(e.key.keysym.sym == SDLK_r)
             {
-                Grid_Reset(0, 1000);
+                Life_Reset();
             }
             if(e.key.keysym.sym == SDLK_p)
             {
@@ -62,16 +62,16 @@ void Events_Handle()
             {
                 lmb_held = 1;
                 
-                Rec_Connect(x, y, 100);
+                grab_x = x;
+                grab_y = y;
+                dest_x = x;
+                dest_y = y;
             }
             if (e.button.button == SDL_BUTTON_MIDDLE) 
             {
                 mmb_held = 1;
                 
-                grab_x = x;
-                grab_y = y;
-                dest_x = x;
-                dest_y = y;
+                Rec_Connect(x, y, 100);
                 
                 // Rec_Push(x, y, 0, -1, 1, 0);
             }
@@ -116,7 +116,7 @@ void Events_Handle()
                 
                 
             }
-            if (lmb_held == 1)
+            if (mmb_held == 1)
             {
                 // if(Find_Free_Genome_Id() != 0)
                 // {
@@ -141,7 +141,7 @@ void Events_Handle()
                 
                 
             }
-            if (mmb_held == 1)
+            if (lmb_held == 1)
             {
                 dest_x = x;
                 dest_y = y;

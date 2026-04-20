@@ -8,21 +8,27 @@ uint16_t free_g_id;
 
 uint16_t mutation_rate = 200;
 uint16_t mutation_max = 1000;
-uint8_t starting_matter = 1;
-uint8_t starting_energy = 127;
+uint8_t starting_matter = 32;
+uint8_t starting_energy = 1;
 uint8_t req_matter = 1;
 uint8_t req_energy = 127;
 
 uint8_t debug_life = 0;
-uint8_t dynamic_rules = 0;
+uint8_t dynamic_rules = 1;
+uint32_t max_lifetime = 20000;
+uint32_t max_population = 3000;
+uint16_t pop_perc = 50;
+uint16_t pop_threshold = 50;
+uint32_t A;
+uint32_t B;
 uint8_t force_mult = 0;
-uint8_t repopulate = 0;
+uint8_t repopulate = 1;
 
 uint32_t next_id;
 uint32_t population_size;
-uint32_t lifetime = 1;
+uint32_t lifetime = 128;
 uint8_t eat_div = 1;
-uint8_t life = 0;
+uint8_t life = 1;
 
 uint8_t force_mult_mode = 0;
 
@@ -47,6 +53,9 @@ void Cells_Init()
         Stack_Reset(&cells[id].call_stack);
         Stack_Reset(&cells[id].data_stack);
     }
+    
+    B = MAX_CELLS / max_population;
+    A = max_population / (1 + max_lifetime / B);
     
     free_id = 1;
     population_size = 0;
@@ -99,13 +108,17 @@ void Cells_Update()
     }
     while(id != 0);
     
-    if(population_size < 1000)
+    if(population_size < pop_threshold)
     {
         if((population_size == 0 || force_mult == 0)
-        && repopulate) Populate(1000);
+        && repopulate) 
+        {
+            Life_Reset();
+            Populate(pop_perc);
+        }
         else if(force_mult == 1)
         {
-            Grid_Reset(0, 500);
+            Grid_Reset(0, 100);
             force_mult_mode = 1;
         }
     }
@@ -117,13 +130,14 @@ void Cells_Update()
             Force_Multiply();
             if(population_size > 50000) force_mult_mode = 0;
         }
-        // printf("population_size %6d force_mult_mode %d\n", population_size, force_mult_mode);
+        printf("population_size %6d force_mult_mode %d\n", population_size, force_mult_mode);
     }
     if(dynamic_rules)
     {
-        lifetime = max(MAX_CELLS / (4 * population_size + MAX_CELLS / 1024) - 10, 1);
-        mutation_rate = lifetime / 4;
-        // printf("population_size %d mutation_rate %d lifetime %d\n", population_size, mutation_rate, lifetime);
+        lifetime = max(MAX_CELLS / (population_size + A) - B, 1);
+        // lifetime = max(max_lifetime - population_size * max_lifetime / max_population, 1);
+        mutation_rate = min(fast_root(max(mutation_max * mutation_max * lifetime / population_size, 1)), 300);
+        printf("population_size %6d mutation_rate %3d lifetime %4d\n", population_size, mutation_rate, lifetime);
     }
 }
 
@@ -422,7 +436,7 @@ void Cell_Exec(uint32_t id)
     Tile *itself = Grid_Get(cell->x, cell->y);
     uint8_t mask;
     uint8_t eat_amount = 255;
-    uint8_t move_strength = 4;
+    uint8_t move_strength = 2;
     
     int16_t x = cell->x;
     int16_t y = cell->y;
@@ -431,13 +445,20 @@ void Cell_Exec(uint32_t id)
     
     int8_t photo_threshold = -1;
     uint8_t how_open = Is_Membrane(x, y);
+    int16_t new_energy;
     
-    if(rand() % lifetime == 0 && life)
+    if(life)
     {
         if(cell->photo == 0)
-            itself->energy = max(itself->energy - 1, 0);
+        {
+            new_energy = itself->energy - 1 - how_open;
+            itself->energy = max(new_energy, 0);
+        }
         if(cell->photo == 1)
-            itself->energy = min(itself->energy + 1, 255);
+        {
+            new_energy = itself->energy + 1 + how_open;
+            itself->energy = min(new_energy, 255);
+        }
     }
     
     for(int steps = MAX_STEPS * (1 - life); steps < MAX_STEPS; steps++)
@@ -548,14 +569,15 @@ void Cell_Exec(uint32_t id)
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
             itself = Grid_Get(cell->x, cell->y);
         
-            temp = cell->photo ? 1 : 1 + move_strength * Count_Bits_8(itself->links);
+            temp = cell->photo ? 1 : 1 + gene->arg / move_strength;
             
             if(dx != 0 && dy != 0
             && rand() % 1000 > 707) break; 
             
-            if(cell->dir != 8 && itself->energy > temp)
+            if(cell->dir != 8// && itself->energy > temp
+            )
             {
-                itself->energy -= temp;
+                // itself->energy -= temp;
                 cell->acc = 0;
                 if(Rec_Push(cell->x, cell->y, dx, dy, temp, 0))
                 {
@@ -569,6 +591,8 @@ void Cell_Exec(uint32_t id)
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
             itself = Grid_Get(cell->x, cell->y);
             read = cell->photo ? eat_amount : eat_amount;
+            
+            if(cells[neighbor->id].photo) read /= 16;
             
             if(dx != 0 && dy != 0
             && rand() % 1000 > 707) break; 
@@ -699,7 +723,6 @@ void Cell_Exec(uint32_t id)
             cell->acc = cells[neighbor->id].acc;
             break;
         case CMD_DETACH:
-            break;
             dx = dir_to_coords[cell->dir][0];
             dy = dir_to_coords[cell->dir][1];
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
@@ -735,7 +758,6 @@ void Cell_Exec(uint32_t id)
             }
             break;
         case CMD_OUTLET_OFF:
-            break;
             dx = dir_to_coords[cell->dir][0];
             dy = dir_to_coords[cell->dir][1];
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
@@ -822,9 +844,12 @@ void Cell_Buf_Upd(uint32_t id)
     cell->buf_matter = 0;
     cell->buf_energy = 0;
         
-    // if(itself->energy == 0 
-    // || itself->energy == 255
-    // ) Cell_Destroy(id);
+    if(rand() % lifetime == 0)
+    {
+        if(itself->energy == 0 
+        || itself->energy == 255
+        ) Cell_Destroy(id);
+    }
 }
 
 void Redist_Energy(uint32_t id)
@@ -965,7 +990,8 @@ void Populate(int n)
     {
         for(int x = 0; x < grid_width; x++)
         {
-            if(rand() % 10000 < n)
+            if(rand() % 10000 < n// && rand() % grid_height < y
+            )
             {
                 if(Find_Free_Genome_Id() != 0)
                 {
@@ -1015,4 +1041,21 @@ void Force_Multiply()
         id = next_id;
     }
     while(id != 0);
+}
+
+void Life_Reset()
+{
+    Tile *tile;
+    for(int y = 0; y < grid_height; y++)
+    {
+        for(int x = 0; x < grid_width; x++)
+        {
+            tile = Grid_Get(x, y);
+            if(cells[tile->id].used && tile->id != 0)
+            {
+                Cell_Destroy(tile->id);
+            }
+            Grid_Set(x, y, 0, 0);
+        }
+    }
 }
