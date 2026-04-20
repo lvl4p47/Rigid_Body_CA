@@ -75,6 +75,7 @@ void Grid_Set(int16_t x, int16_t y, uint32_t id, uint8_t type)
     grid_array[y1][x1].matter = 0;
     grid_array[y1][x1].energy = 0;
     grid_array[y1][x1].rec_str = 0;
+    grid_array[y1][x1].on_edge = 0;
     grid_array[y1][x1].links = 0;
     
     if(id == 0 && type == 1) grid_array[y1][x1].matter = 254;
@@ -100,6 +101,7 @@ void Grid_Move(int16_t x, int16_t y, int16_t dx, int16_t dy)
     grid_array[y2][x2].matter = grid_array[y1][x1].matter;
     grid_array[y2][x2].energy = grid_array[y1][x1].energy;
     grid_array[y2][x2].rec_str = 0;
+    grid_array[y2][x2].on_edge = 0;
     grid_array[y2][x2].links = grid_array[y1][x1].links;
     
     grid_array[y1][x1].id = 0;
@@ -107,6 +109,7 @@ void Grid_Move(int16_t x, int16_t y, int16_t dx, int16_t dy)
     grid_array[y1][x1].matter = 0;
     grid_array[y1][x1].energy = 0;
     grid_array[y1][x1].rec_str = 0;
+    grid_array[y1][x1].on_edge = 0;
     grid_array[y1][x1].links = 0;
 }
 
@@ -145,7 +148,7 @@ int8_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength
     int8_t problems = 0;
     int8_t ret;
     
-    if(local_debug) printf("start str %d c %d\n", strength, center->links);
+    if(local_debug) printf("start x %d y %d str %d c %d\n", x, y, strength, center->links);
     
     if(strength == 0 || center->type == 0) 
     {
@@ -217,10 +220,15 @@ int8_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength
                 
                 if(rigid == 0)
                 {
-                    if(ret > 0 && strength == 1 && problems - ret <= 0)
+                    if(ret > 0 && strength == 1// && problems - ret <= 0
+                    )
                     {
-                        if(max(abs(nx - x - dx), abs(ny - y - dy)) < 2)
+                        if(
+                        max(abs(nx - x - dx), abs(ny - y - dy)) < 2
+                        )
                         {
+                            if(neighbor->on_edge == 0)
+                                neighbor->on_edge = 1;
                             neighbor->rec_str = 0;
                             if(local_debug) printf("no tearing dir %d\n", dir);
                             problems -= ret;
@@ -280,13 +288,14 @@ int8_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength
                 }
                 if(ret > 0) 
                 {
-                    if(local_debug) printf("My neighbor to the side can't move str %d\n", strength);
+                    if(local_debug) printf("My x %d y %d neighbor x %d y %d to the side can't move str %d\n", x, y, nx, ny, strength);
                 }
             }
         }
     }
+    if(problems <= 0) center->on_edge = 2;
     
-    if(local_debug) printf("finish str %d problems %d c %d\n", strength, problems, center->links);
+    if(local_debug) printf("finish str %d problems %d c %d edge %d\n", strength, problems, center->links, center->on_edge);
     
     return problems;
 }
@@ -308,7 +317,7 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy)
         return;
     }
     
-    if(local_debug) printf("x %d y %d str %d\n", x, y, str);
+    if(local_debug) printf("x %d y %d str %d on_enge %d\n", x, y, str, center->on_edge);
     
     neighbor = Grid_Get(x + dx, y + dy);
     if(neighbor->type != 0)
@@ -330,6 +339,8 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy)
         int16_t nx, ny;
         uint8_t mask, opposite;
         uint8_t is_outlet, is_outlet_n;
+        uint8_t buf_links = 0;
+        uint8_t buf_outlet = 0;
         for(uint8_t dir = 0; dir < 8; dir++)
         {
             mask = (uint8_t)1 << dir;
@@ -342,12 +353,12 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy)
             other = &cells[neighbor->id];
             
             if(center->links & mask
-            && str == 1
             && neighbor->type != 0
+            && neighbor->on_edge == 1
             && max(abs(nx - x - dx), abs(ny - y - dy)) < 2
-            && 1
             )
             {
+                if(local_debug) printf("x %d y %d str %d updating links with x %d y %d str %d\n", x, y, str, x + Dx, y + Dy, neighbor->rec_str);
                 center->links &= (uint8_t)~mask;
                 is_outlet = 0;
                 if(itself->outlet & mask)
@@ -368,10 +379,10 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy)
                 mask = (uint8_t)1 << new_dir;
                 opposite = (uint8_t)1 << mod(new_dir + 4, 8);
                 
-                center->links |= mask;
+                buf_links |= mask;
                 if(is_outlet)
                 {
-                    itself->outlet |= mask;
+                    buf_outlet |= mask;
                 }
                 neighbor->links |= opposite;
                 if(is_outlet_n)
@@ -380,6 +391,9 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy)
                 }
             }
         }
+        
+        center->links |= buf_links;
+        itself->outlet |= buf_outlet; 
         
         Grid_Move(x, y, dx, dy);
         if(local_debug) printf("x %d y %d str %d moved\n", x, y, str);
@@ -400,14 +414,39 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy)
             || neighbor->rec_str <= 0)
             )
             {
-                if(local_debug) if(neighbor->rec_str > str) printf("%d > %d ", neighbor->rec_str, str - 1);
+                // if(local_debug) if(neighbor->rec_str > str) printf("%d > %d ", neighbor->rec_str, str - 1);
                 if(local_debug) printf("x %d y %d str %d side reaching x %d y %d str %d\n", x, y, str, nx, ny, neighbor->rec_str);
                 Rec_Move(nx, ny, dx, dy);
             }
         }
     }
     
+    for(int ny = y - 1; ny <= y + 1; ny++)
+    {
+        for(int nx = x - 1; nx <= x + 1; nx++)
+        {
+            neighbor = Grid_Get(nx, ny);
+            if(Active_Neighbors(nx, ny) == 0)
+                neighbor->on_edge = 0;
+        }
+    }
+    
     return;
+}
+
+uint8_t Active_Neighbors(int16_t x, int16_t y)
+{
+    Tile *neighbor;
+    for(int ny = y - 1; ny <= y + 1; ny++)
+    {
+        for(int nx = x - 1; nx <= x + 1; nx++)
+        {
+            neighbor = Grid_Get(nx, ny);
+            if(neighbor->rec_str != 0)
+                return 1;
+        }
+    }
+    return 0;
 }
 
 void Rec_Clean(int16_t x, int16_t y, int8_t dx, int8_t dy)
@@ -424,6 +463,7 @@ void Rec_Clean(int16_t x, int16_t y, int8_t dx, int8_t dy)
     neighbor = Grid_Get(x + dx, y + dy);
     if(neighbor->type != 0)
     {
+        neighbor->on_edge = 0;
         if(neighbor->rec_str != 0)
         {
             if(local_debug) printf("x %d y %d str %d front reaching x %d y %d str %d\n", x, y, str, x + dx, y + dy, neighbor->rec_str);
@@ -432,12 +472,14 @@ void Rec_Clean(int16_t x, int16_t y, int8_t dx, int8_t dy)
     }
         
     center->rec_str = 0;
+    center->on_edge = 0;
     
     for(int ny = y - 1; ny <= y + 1; ny++)
     {
         for(int nx = x - 1; nx <= x + 1; nx++)
         {
             neighbor = Grid_Get(nx, ny);
+            neighbor->on_edge = 0;
             if(neighbor->type != 0
             && neighbor->rec_str != 0)
             {
@@ -453,12 +495,24 @@ void Rec_Clean(int16_t x, int16_t y, int8_t dx, int8_t dy)
 
 uint8_t Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength, uint8_t rigid)
 {
-    int16_t ret = Rec_Can_Move(x, y, dx, dy, strength, rigid);
-    // printf("\nRCM %d\n", ret);
-    if(ret <= 0) 
-        Rec_Move(x, y, dx, dy); 
-    else Rec_Clean(x, y, dx, dy);
+    int16_t cur_str = strength;
+    int16_t ret;
     
+    while(cur_str > 0)
+    {
+        ret = Rec_Can_Move(x, y, dx, dy, cur_str, rigid);
+        if(ret <= 0) 
+        {
+            Rec_Move(x, y, dx, dy);
+            cur_str = -1;
+        }
+        else
+        {
+            Rec_Clean(x, y, dx, dy);
+            cur_str--; 
+        }
+        
+    }
     return (uint8_t)(ret <= 0);
 }
 
@@ -551,7 +605,7 @@ uint8_t Neighbor_Energy(int16_t x, int16_t y)
 void Global_Time_Update()
 {
     timer++;
-    if(timer % 256 == 0)
+    if(timer % 16 == 0)
     {
         global_time++;
         // printf("time %3d\n", global_time);

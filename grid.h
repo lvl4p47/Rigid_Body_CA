@@ -13,6 +13,7 @@ typedef struct {
     uint8_t matter;
     uint8_t energy;
     int16_t rec_str;
+    uint8_t on_edge;
     uint8_t links;
     
     uint8_t pheromone[MAX_PHEROMONES][3];
@@ -50,6 +51,7 @@ void Grid_Update();
 
 int8_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength, uint8_t rigid);
 void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy);
+uint8_t Active_Neighbors(int16_t x, int16_t y);
 void Rec_Clean(int16_t x, int16_t y, int8_t dx, int8_t dy);
 uint8_t Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength, uint8_t rigid);
 void Rec_Link_All(int16_t x, int16_t y, int16_t strength);

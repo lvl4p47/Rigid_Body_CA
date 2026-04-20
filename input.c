@@ -79,11 +79,11 @@ void Events_Handle()
                 //     cell->outlet |= mask;
                 // }
                 
-                Rec_Connect(x, y, 2);
+                Rec_Connect(x, y, 3);
             }
             if (e.button.button == SDL_BUTTON_MIDDLE) 
             {
-                Rec_Push(x, y, 1, 0, 1, 0);
+                Rec_Push(x, y, 1, 0, 2, 0);
             }
         }
         if (e.type == SDL_MOUSEBUTTONUP) {

@@ -291,6 +291,66 @@ void Grid_Draw()
             }
         }
         break;
+    case DEBUG:
+        for(uint32_t id = 1; id < MAX_CELLS; id++)
+        {
+            if(cells[id].used)
+            {
+                x = cells[id].x;
+                y = cells[id].y;
+                tile = Grid_Get(x, y);
+                int type = tile->type;
+                int value = tile->on_edge;
+                int str = tile->rec_str;
+                uint8_t links = tile->links;
+                // links = cells[tile->id].outlet;
+                int r = 0, g = 0, b = 0;
+                    
+                switch (value)
+                {
+                case 0:
+                    r = 255, g = 0, b = 0;
+                    break;
+                case 1:
+                    r = 0, g = 255, b = 0;
+                    break;
+                case 2:
+                    r = 0, g = 0, b = 255;
+                    break;
+                }
+                
+                rect.x = x * CELL_SIZE;
+                rect.y = y * CELL_SIZE;
+                
+                if(draw_links == 1 && 0)
+                {
+                    r = 0, g = 0, b = 0;
+                }
+                
+                SDL_SetRenderDrawColor(renderer, r, g, b, 255);
+                SDL_RenderFillRect(renderer, &rect);
+                
+                if(draw_links == 0) continue;
+                
+                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                uint8_t mask;
+                int16_t dx, dy, cx, cy;
+                cx = rect.x + CELL_SIZE / 2;
+                cy = rect.y + CELL_SIZE / 2;
+                for(uint8_t dir = 0; dir < 8; dir++)
+                {
+                    dx = dir_to_coords[dir][0] * CELL_SIZE / 2;
+                    dy = dir_to_coords[dir][1] * CELL_SIZE / 2;
+                    mask = (uint8_t)1 << dir;
+                    
+                    if(links & mask)
+                    {
+                        SDL_RenderDrawLineF(renderer, cx, cy, cx + dx, cy + dy);
+                    }
+                }
+            }
+        }
+        break;
     
     default:
         break;

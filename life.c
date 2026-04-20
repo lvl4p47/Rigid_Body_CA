@@ -440,7 +440,7 @@ void Cell_Exec(uint32_t id)
             itself->energy = min(itself->energy + 1, 255);
     }
     
-    for(int steps = MAX_STEPS * life; steps < MAX_STEPS; steps++)
+    for(int steps = MAX_STEPS * (1 - life); steps < MAX_STEPS; steps++)
     {
         gene = &genome->genes[*pc];
         

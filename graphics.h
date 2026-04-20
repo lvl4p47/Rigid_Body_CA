@@ -13,7 +13,7 @@
 
 #define WINDOW_WIDTH 1920 // for debugging
 #define WINDOW_HEIGHT 720
-#define CELL_SIZE 5
+#define CELL_SIZE 50
 
 typedef enum
 {
@@ -22,6 +22,7 @@ typedef enum
     GENOMES,
     ACC,
     PHERO,
+    DEBUG,
     DISP_MODE_COUNT
 } disp_modes;
 
