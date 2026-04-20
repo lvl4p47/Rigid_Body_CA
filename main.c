@@ -10,18 +10,23 @@ int main(int argc, char* args[])
     All_Init();
 
     while (!quit) {
+        
         freopen("debug.log", "w", stderr);
         
         Global_Time_Update();
         
+        // Cells_Update();
+        
         Events_Handle();
         
-        Cells_Update();
+        if(pause) continue;
+
+        Events_Process();
 
         if(display_mode == TROPHS
         || display_mode == GENOMES
         || display_mode == ACC
-        // || display_mode == ENERGY
+        || display_mode == DEBUG
         || timer == 0)
         {
             Screen_Clear();

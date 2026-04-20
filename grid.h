@@ -15,6 +15,8 @@ typedef struct {
     int16_t rec_str;
     uint8_t on_edge;
     uint8_t links;
+    uint8_t buf_links;
+    uint8_t buf_outlet;
     
     uint8_t pheromone[MAX_PHEROMONES][3];
 } Tile;

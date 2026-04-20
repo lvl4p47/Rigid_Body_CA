@@ -77,6 +77,8 @@ void Grid_Set(int16_t x, int16_t y, uint32_t id, uint8_t type)
     grid_array[y1][x1].rec_str = 0;
     grid_array[y1][x1].on_edge = 0;
     grid_array[y1][x1].links = 0;
+    grid_array[y1][x1].buf_links = 0;
+    grid_array[y1][x1].buf_outlet = 0;
     
     if(id == 0 && type == 1) grid_array[y1][x1].matter = 254;
 }
@@ -103,6 +105,8 @@ void Grid_Move(int16_t x, int16_t y, int16_t dx, int16_t dy)
     grid_array[y2][x2].rec_str = 0;
     grid_array[y2][x2].on_edge = 0;
     grid_array[y2][x2].links = grid_array[y1][x1].links;
+    grid_array[y2][x2].buf_links = 0;
+    grid_array[y2][x2].buf_outlet = 0;
     
     grid_array[y1][x1].id = 0;
     grid_array[y1][x1].type = 0;
@@ -111,6 +115,8 @@ void Grid_Move(int16_t x, int16_t y, int16_t dx, int16_t dy)
     grid_array[y1][x1].rec_str = 0;
     grid_array[y1][x1].on_edge = 0;
     grid_array[y1][x1].links = 0;
+    grid_array[y1][x1].buf_links = 0;
+    grid_array[y1][x1].buf_outlet = 0;
 }
 
 void Grid_Update()
@@ -160,6 +166,8 @@ int8_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength
         }
         else return 0; // can't reach now, but it was reached by some other branch
     }
+    
+    center->on_edge = 2;
     
     if(center->rec_str == -1) // reached previously unreachable, str != 0
     {
@@ -232,51 +240,9 @@ int8_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength
                             neighbor->rec_str = 0;
                             if(local_debug) printf("no tearing dir %d\n", dir);
                             problems -= ret;
-                            
-                            if(local_debug) printf("c %d n %d\n", center->links, neighbor->links);
-                            
-                            // center->links &= (uint8_t)~mask;
-                            // is_outlet = 0;
-                            // if(itself->outlet & mask)
-                            // {
-                            //     is_outlet = 1;
-                            //     itself->outlet &= (uint8_t)~mask;
-                            // }
-                            // neighbor->links &= (uint8_t)~opposite;
-                            // is_outlet_n = 0;
-                            // if(other->outlet & opposite)
-                            // {
-                            //     is_outlet_n = 1;
-                            //     other->outlet &= (uint8_t)~opposite;
-                            // }
-                            
-                            // if(local_debug) printf("c %d n %d\n", center->links, neighbor->links);                         
-                            
-                            // uint8_t new_dir = coords_to_dir[Dy - dy + 1][Dx - dx + 1];
-                            // if(local_debug) printf("dx %d dy %d\n", Dx - dx + 1, Dy - dy + 1);
-                            // if(local_debug) printf("new dir %d\n", new_dir);
-                            
-                            // mask = (uint8_t)1 << new_dir;
-                            // opposite = (uint8_t)1 << mod(new_dir + 4, 8);
-                            
-                            // if(local_debug) printf("m %d o %d\n", mask, opposite);
-                            
-                            // center->links |= mask;
-                            // if(is_outlet)
-                            // {
-                            //     itself->outlet |= mask;
-                            // }
-                            // neighbor->links |= opposite;
-                            // if(is_outlet_n)
-                            // {
-                            //     other->outlet |= opposite;
-                            // }
-                            
-                            if(local_debug) printf("c %d n %d\n", center->links, neighbor->links);
                         }
                         else
                         {
-                            // problems += 1;
                             if(local_debug) printf("tearing\n");
                         }
                     }
@@ -293,7 +259,6 @@ int8_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength
             }
         }
     }
-    if(problems <= 0) center->on_edge = 2;
     
     if(local_debug) printf("finish str %d problems %d c %d edge %d\n", strength, problems, center->links, center->on_edge);
     
@@ -306,6 +271,7 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy)
     
     Tile *center = Grid_Get(x, y);
     Tile *neighbor, *linked;
+    Cell *other;
     int8_t problems = 0;
     int16_t str = center->rec_str;
     if(str < -1) str = -1 - str;
@@ -314,6 +280,27 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy)
     {
         if(center->rec_str == -1)
             center->rec_str = 0;
+            
+        // for(int ny = y - 1; ny <= y + 1; ny++)
+        // {
+        //     for(int nx = x - 1; nx <= x + 1; nx++)
+        //     {
+        //         neighbor = Grid_Get(nx, ny);
+        //         other = &cells[neighbor->id];
+        //         if(Active_Neighbors(nx, ny) == 0)
+        //         {
+        //             if(local_debug) printf("x %d y %d str %d resetting 1 x %d y %d str %d\n", x, y, str, nx, ny, neighbor->rec_str);
+        //             neighbor->on_edge = 0;
+                    
+        //             neighbor->links |= neighbor->buf_links;
+        //             other->outlet |= neighbor->buf_outlet;
+                    
+        //             neighbor->buf_links = 0;
+        //             neighbor->buf_outlet = 0;
+        //         }
+        //     }
+        // }
+        
         return;
     }
     
@@ -322,7 +309,7 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy)
     neighbor = Grid_Get(x + dx, y + dy);
     if(neighbor->type != 0)
     {
-        if(neighbor->rec_str == str - 1)
+        if(neighbor->rec_str != 0 && neighbor->on_edge != 1)
         {
             if(local_debug) printf("x %d y %d str %d front reaching x %d y %d str %d\n", x, y, str, x + dx, y + dy, neighbor->rec_str);
             Rec_Move(x + dx, y + dy, dx, dy);
@@ -332,15 +319,13 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy)
         problems = 1;
         
     Cell *itself = &cells[center->id];
-    Cell *other;
+    
     if(neighbor->type == 0)
     {
         int16_t Dx, Dy;
         int16_t nx, ny;
         uint8_t mask, opposite;
         uint8_t is_outlet, is_outlet_n;
-        uint8_t buf_links = 0;
-        uint8_t buf_outlet = 0;
         for(uint8_t dir = 0; dir < 8; dir++)
         {
             mask = (uint8_t)1 << dir;
@@ -352,13 +337,14 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy)
             neighbor = Grid_Get(nx, ny);
             other = &cells[neighbor->id];
             
-            if(center->links & mask
+            if(
+            (center->links & mask || center->buf_links & mask)
             && neighbor->type != 0
             && neighbor->on_edge == 1
             && max(abs(nx - x - dx), abs(ny - y - dy)) < 2
             )
             {
-                if(local_debug) printf("x %d y %d str %d updating links with x %d y %d str %d\n", x, y, str, x + Dx, y + Dy, neighbor->rec_str);
+                if(local_debug) printf("x %d y %d str %d updating links with x %d y %d str %d on edge %d\n", x, y, str, x + Dx, y + Dy, neighbor->rec_str, neighbor->on_edge);
                 center->links &= (uint8_t)~mask;
                 is_outlet = 0;
                 if(itself->outlet & mask)
@@ -379,28 +365,53 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy)
                 mask = (uint8_t)1 << new_dir;
                 opposite = (uint8_t)1 << mod(new_dir + 4, 8);
                 
-                buf_links |= mask;
+                center->buf_links |= mask;
                 if(is_outlet)
                 {
-                    buf_outlet |= mask;
+                    center->buf_outlet |= mask;
                 }
-                neighbor->links |= opposite;
+                neighbor->buf_links |= opposite;
                 if(is_outlet_n)
                 {
-                    other->outlet |= opposite;
+                    neighbor->buf_outlet |= opposite;
                 }
             }
         }
         
-        center->links |= buf_links;
-        itself->outlet |= buf_outlet; 
+        center->links |= center->buf_links;
+        itself->outlet |= center->buf_outlet; 
+        
+        center->buf_links = 0;
+        center->buf_outlet = 0;
         
         Grid_Move(x, y, dx, dy);
+        center->on_edge = 0;
         if(local_debug) printf("x %d y %d str %d moved\n", x, y, str);
         center = Grid_Get(x + dx, y + dy);
     }
     else
     {
+        if(local_debug) printf("x %d y %d can't move forward\n", x, y);
+        for(int ny = y - 1; ny <= y + 1; ny++)
+        {
+            for(int nx = x - 1; nx <= x + 1; nx++)
+            {
+                neighbor = Grid_Get(nx, ny);
+                other = &cells[neighbor->id];
+                if(Active_Neighbors(nx, ny) == 0 && neighbor->on_edge == 1)
+                {
+                    if(local_debug) printf("x %d y %d str %d resetting 2 x %d y %d str %d\n", x, y, str, nx, ny, neighbor->rec_str);
+                    neighbor->on_edge = 0;
+                    
+                    neighbor->links |= neighbor->buf_links;
+                    other->outlet |= neighbor->buf_outlet;
+                    
+                    neighbor->buf_links = 0;
+                    neighbor->buf_outlet = 0;
+                }
+            }
+        }
+    
         return;
     }
     
@@ -426,8 +437,18 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy)
         for(int nx = x - 1; nx <= x + 1; nx++)
         {
             neighbor = Grid_Get(nx, ny);
-            if(Active_Neighbors(nx, ny) == 0)
+            other = &cells[neighbor->id];
+            if(Active_Neighbors(nx, ny) == 0 && neighbor->on_edge == 1)
+            {
+                if(local_debug) printf("x %d y %d str %d resetting 3 x %d y %d str %d\n", x, y, str, nx, ny, neighbor->rec_str);
                 neighbor->on_edge = 0;
+                
+                neighbor->links |= neighbor->buf_links;
+                other->outlet |= neighbor->buf_outlet;
+                
+                neighbor->buf_links = 0;
+                neighbor->buf_outlet = 0;
+            }
         }
     }
     
@@ -437,13 +458,17 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy)
 uint8_t Active_Neighbors(int16_t x, int16_t y)
 {
     Tile *neighbor;
+    if(Grid_Get(x, y)->type == 0) return 1;
     for(int ny = y - 1; ny <= y + 1; ny++)
     {
         for(int nx = x - 1; nx <= x + 1; nx++)
         {
-            neighbor = Grid_Get(nx, ny);
-            if(neighbor->rec_str != 0)
-                return 1;
+            if(nx != x || ny != y)
+            {
+                neighbor = Grid_Get(nx, ny);
+                if(neighbor->rec_str != 0)
+                    return 1;
+            }
         }
     }
     return 0;
@@ -457,20 +482,21 @@ void Rec_Clean(int16_t x, int16_t y, int8_t dx, int8_t dy)
     Tile *neighbor;
     int8_t problems = 0;
     int16_t str = center->rec_str;
+    Cell *other;
     
     if(local_debug) printf("x %d y %d str %d\n", x, y, str);
     
     neighbor = Grid_Get(x + dx, y + dy);
     if(neighbor->type != 0)
     {
-        neighbor->on_edge = 0;
-        if(neighbor->rec_str != 0)
+        if(neighbor->rec_str != 0
+        || neighbor->on_edge == 1)
         {
             if(local_debug) printf("x %d y %d str %d front reaching x %d y %d str %d\n", x, y, str, x + dx, y + dy, neighbor->rec_str);
             Rec_Clean(x + dx, y + dy, dx, dy);
         }
     }
-        
+    
     center->rec_str = 0;
     center->on_edge = 0;
     
@@ -479,9 +505,10 @@ void Rec_Clean(int16_t x, int16_t y, int8_t dx, int8_t dy)
         for(int nx = x - 1; nx <= x + 1; nx++)
         {
             neighbor = Grid_Get(nx, ny);
-            neighbor->on_edge = 0;
             if(neighbor->type != 0
-            && neighbor->rec_str != 0)
+            && (neighbor->rec_str != 0
+            || neighbor->on_edge == 1)
+            )
             {
                 if(local_debug) if(neighbor->rec_str > str) printf("%d > %d ", neighbor->rec_str, str - 1);
                 if(local_debug) printf("x %d y %d str %d side reaching x %d y %d str %d\n", x, y, str, nx, ny, neighbor->rec_str);
@@ -497,6 +524,8 @@ uint8_t Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength, u
 {
     int16_t cur_str = strength;
     int16_t ret;
+    
+    // printf("\n");
     
     while(cur_str > 0)
     {
@@ -522,7 +551,7 @@ void Rec_Link_All(int16_t x, int16_t y, int16_t strength)
     Tile *neighbor;
     uint8_t just_remove = (center->type == 0);
     
-    if(strength == 0) 
+    if(strength == 0 || just_remove) 
     {
         return;
     }

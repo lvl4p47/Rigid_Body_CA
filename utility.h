@@ -28,6 +28,8 @@ extern int8_t dir_to_coords[9][2];
 extern uint8_t coords_to_dir[3][3];
 extern uint32_t my_state;
 
+extern int pause;
+
 static inline int64_t mod(int64_t x, int64_t m) {
     int64_t r = x % m;
     return r >= 0 ? r : r + m;

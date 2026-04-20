@@ -21,6 +21,7 @@ uint8_t coords_to_dir[3][3] =
 };
 
 uint32_t state;
+int pause = 0;
 
 int min(int a, int b)
 {

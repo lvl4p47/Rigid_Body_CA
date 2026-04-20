@@ -6,5 +6,6 @@
 extern int quit;
 
 void Events_Handle();
+void Events_Process();
 
 #endif

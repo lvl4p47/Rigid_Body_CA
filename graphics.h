@@ -13,7 +13,7 @@
 
 #define WINDOW_WIDTH 1920 // for debugging
 #define WINDOW_HEIGHT 720
-#define CELL_SIZE 50
+#define CELL_SIZE 10
 
 typedef enum
 {

@@ -309,15 +309,20 @@ void Grid_Draw()
                 switch (value)
                 {
                 case 0:
-                    r = 255, g = 0, b = 0;
+                    r = 83;
                     break;
                 case 1:
-                    r = 0, g = 255, b = 0;
+                    r = 166;
                     break;
                 case 2:
-                    r = 0, g = 0, b = 255;
+                    r = 255;
                     break;
                 }
+                
+                g = (str > 0) * 255;
+                b = (str < 0) * 255;
+                
+                // if(value != 0) pause = 1;
                 
                 rect.x = x * CELL_SIZE;
                 rect.y = y * CELL_SIZE;
@@ -345,6 +350,11 @@ void Grid_Draw()
                     
                     if(links & mask)
                     {
+                        // if(Grid_Get(x + dir_to_coords[dir][0], y + dir_to_coords[dir][1])->type == 0)
+                        // {
+                        //     pause = 1;
+                        //     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                        // }
                         SDL_RenderDrawLineF(renderer, cx, cy, cx + dx, cy + dy);
                     }
                 }
