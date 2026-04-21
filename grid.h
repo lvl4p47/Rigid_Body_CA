@@ -52,7 +52,7 @@ void Grid_Move(int16_t x, int16_t y, int16_t dx, int16_t dy);
 void Grid_Update();
 
 int8_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength, uint8_t rigid);
-void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy);
+void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, uint16_t *moved);
 uint8_t Active_Neighbors(int16_t x, int16_t y);
 void Rec_Clean(int16_t x, int16_t y, int8_t dx, int8_t dy);
 uint8_t Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength, uint8_t rigid);

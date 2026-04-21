@@ -4,9 +4,9 @@
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
 
-uint8_t draw_links = 0;
+uint8_t draw_links = 1;
 uint8_t display_mode = ENERGY;
-uint32_t prev_matter = 0;
+uint32_t prev_matter = 0, prev_energy = 0;
 
 
 void Graphics_Init()
@@ -68,6 +68,7 @@ void Grid_Draw()
     {
     case ENERGY:
         uint32_t total_matter = 0;
+        uint32_t total_energy = 0;
         for(int i = 0; i < grid_height; i++)
         {
             for(int j = 0; j < grid_width; j++)
@@ -84,6 +85,7 @@ void Grid_Draw()
                 
                 if(type != 0) total_matter++;
                 total_matter += matter;
+                total_energy += energy;
                     
                 r = matter;
                 b = energy;
@@ -93,12 +95,34 @@ void Grid_Draw()
                 
                 SDL_SetRenderDrawColor(renderer, r, g, b, 255);
                 SDL_RenderFillRect(renderer, &rect);
+                
+                if(draw_links == 0) continue;
+                
+                SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+                uint8_t mask;
+                int16_t dx, dy, cx, cy;
+                cx = rect.x + CELL_SIZE / 2;
+                cy = rect.y + CELL_SIZE / 2;
+                for(uint8_t dir = 0; dir < 8; dir++)
+                {
+                    dx = dir_to_coords[dir][0] * CELL_SIZE / 2;
+                    dy = dir_to_coords[dir][1] * CELL_SIZE / 2;
+                    mask = (uint8_t)1 << dir;
+                    
+                    if(links & mask)
+                    {
+                        SDL_RenderDrawLineF(renderer, cx, cy, cx + dx, cy + dy);
+                    }
+                }
             }
         }
         
         // printf("total_matter %d\n", total_matter);
+        // printf("prev_energy %d   total_energy %d\n", prev_energy, total_energy);
         // if(total_matter != prev_matter && prev_matter != 0) printf("%d\n", 1 / 0);
+        if(total_energy != total_energy_acc) printf("\t\t\t\tenergy leak\n%d\n", 1 / 0);
         prev_matter = total_matter;
+        prev_energy = total_energy;
         break;
     case TROPHS:
         for(uint32_t id = 1; id < MAX_CELLS; id++)

@@ -11,6 +11,7 @@ FILE *file_ptr;
 uint16_t integer;
 
 uint8_t global_time = 0;
+uint8_t phero_life = 16;
 
 void Grid_Init(uint16_t w, uint16_t h)
 {
@@ -265,7 +266,7 @@ int8_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength
     return problems;
 }
 
-void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy)
+void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, uint16_t *moved)
 {
     uint8_t local_debug = 0;
     
@@ -304,7 +305,7 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy)
         return;
     }
     
-    if(local_debug) printf("x %d y %d str %d on_enge %d\n", x, y, str, center->on_edge);
+    if(local_debug) printf("x %d y %d str %d on_edge %d\n", x, y, str, center->on_edge);
     
     neighbor = Grid_Get(x + dx, y + dy);
     if(neighbor->type != 0)
@@ -312,7 +313,7 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy)
         if(neighbor->rec_str != 0 && neighbor->on_edge != 1)
         {
             if(local_debug) printf("x %d y %d str %d front reaching x %d y %d str %d\n", x, y, str, x + dx, y + dy, neighbor->rec_str);
-            Rec_Move(x + dx, y + dy, dx, dy);
+            Rec_Move(x + dx, y + dy, dx, dy, moved);
         }
     }
     else if(neighbor->type != 0)
@@ -385,8 +386,9 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy)
         center->buf_outlet = 0;
         
         Grid_Move(x, y, dx, dy);
+        *moved = *moved + 1;
         center->on_edge = 0;
-        if(local_debug) printf("x %d y %d str %d moved\n", x, y, str);
+        if(local_debug) printf("x %d y %d str %d moved %d\n", x, y, str, *moved);
         center = Grid_Get(x + dx, y + dy);
     }
     else
@@ -427,7 +429,7 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy)
             {
                 // if(local_debug) if(neighbor->rec_str > str) printf("%d > %d ", neighbor->rec_str, str - 1);
                 if(local_debug) printf("x %d y %d str %d side reaching x %d y %d str %d\n", x, y, str, nx, ny, neighbor->rec_str);
-                Rec_Move(nx, ny, dx, dy);
+                Rec_Move(nx, ny, dx, dy, moved);
             }
         }
     }
@@ -524,6 +526,7 @@ uint8_t Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength, u
 {
     int16_t cur_str = strength;
     int16_t ret;
+    uint16_t moved = 0;
     
     // printf("\n");
     
@@ -532,7 +535,7 @@ uint8_t Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength, u
         ret = Rec_Can_Move(x, y, dx, dy, cur_str, rigid);
         if(ret <= 0) 
         {
-            Rec_Move(x, y, dx, dy);
+            Rec_Move(x, y, dx, dy, &moved);
             cur_str = -1;
         }
         else
@@ -542,7 +545,7 @@ uint8_t Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength, u
         }
         
     }
-    return (uint8_t)(ret <= 0);
+    return moved;
 }
 
 void Rec_Link_All(int16_t x, int16_t y, int16_t strength)
@@ -634,7 +637,7 @@ uint8_t Neighbor_Energy(int16_t x, int16_t y)
 void Global_Time_Update()
 {
     timer++;
-    if(timer % 256 == 0)
+    if(timer % phero_life == 0)
     {
         global_time++;
         // printf("time %3d\n", global_time);

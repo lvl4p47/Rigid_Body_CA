@@ -58,6 +58,9 @@ typedef struct {
 
 extern Genome genomes[MAX_GENOMES];
 
+extern int32_t energy_change;
+extern uint32_t total_energy_acc;
+
 void Genomes_Init();
 void Genomes_Print();
 uint16_t Find_Free_Genome_Id();

@@ -180,12 +180,15 @@ void Events_Process()
     }
     
     int str = ax + ay;
+    uint16_t moved = 0;
     
     if(Grid_Get(grab_x, grab_y)->type != 0 && str > 0)
     {
-        if(Rec_Push(grab_x, grab_y, sx, sy, str, 0))
+        moved = Rec_Push(grab_x, grab_y, sx, sy, str, 0);
+        if(moved)
         {
             // printf("\ntimer %3d dest_x %d dest_y %d grab_x %d grab_y %d dx %d dy %d str %d\n", timer, dest_x, dest_y, grab_x, grab_y, dx, dy, str);
+            // printf("moved %d\n", moved);
             
             grab_x += sx;
             grab_y += sy;

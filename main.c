@@ -18,7 +18,7 @@ int main(int argc, char* args[])
         
         cycles++;
         
-        printf("cps %4d ", cps);
+        // printf("cps %4d\n", cps);
         
         Global_Time_Update();
         
@@ -34,6 +34,7 @@ int main(int argc, char* args[])
         || display_mode == GENOMES
         || display_mode == ACC
         || display_mode == DEBUG
+        // || display_mode == ENERGY
         || timer == 0)
         {
             Screen_Clear();
