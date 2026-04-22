@@ -4,14 +4,15 @@ Tile **grid_array = NULL;
 uint16_t grid_width = 0;
 uint16_t grid_height = 0;
 
-uint8_t timer = 0;
+uint8_t timer = 255;
 uint8_t debug = 0;
 
 FILE *file_ptr;
 uint16_t integer;
 
 uint8_t global_time = 0;
-uint8_t phero_life = 16;
+uint8_t phero_life = 32;
+uint8_t border = 1;
 
 void Grid_Init(uint16_t w, uint16_t h)
 {
@@ -41,6 +42,7 @@ void Grid_Quit()
 
 void Grid_Reset(uint8_t type, uint16_t chance)
 {
+    Tile *tile;
     if(debug) fprintf(stderr, "\nGrid_Reset"), fflush(stderr);
     for(int i = 0; i < grid_height; i++)
     {
@@ -48,6 +50,25 @@ void Grid_Reset(uint8_t type, uint16_t chance)
         {
             if(rand() % 1000 < chance)
                 Grid_Set(j, i, 0, type);
+
+        }
+    }
+    Border();
+}
+
+void Border()
+{
+    if(border)
+    {
+        for(int i = 0; i < grid_height; i++)
+        {
+            Grid_Set(0, i, 0, 2);
+            Grid_Set(grid_width - 1, i, 0, 2);
+        }
+        for(int j = 0; j < grid_width; j++)
+        {
+            Grid_Set(j, 0, 0, 2);
+            Grid_Set(j, grid_height - 1, 0, 2);
         }
     }
 }
@@ -81,7 +102,7 @@ void Grid_Set(int16_t x, int16_t y, uint32_t id, uint8_t type)
     grid_array[y1][x1].buf_links = 0;
     grid_array[y1][x1].buf_outlet = 0;
     
-    if(id == 0 && type == 1) grid_array[y1][x1].matter = 254;
+    if(id == 0 && type == 1) grid_array[y1][x1].matter = 255;
 }
 
 void Grid_Move(int16_t x, int16_t y, int16_t dx, int16_t dy)
@@ -92,7 +113,7 @@ void Grid_Move(int16_t x, int16_t y, int16_t dx, int16_t dy)
     uint16_t x2 = mod(x + dx, grid_width);
     uint16_t y2 = mod(y + dy, grid_height);
     
-    if(grid_array[y2][x2].id != 0) return;
+    if(grid_array[y2][x2].type != 0) return;
     
     uint32_t id = grid_array[y1][x1].id;
     
@@ -108,6 +129,7 @@ void Grid_Move(int16_t x, int16_t y, int16_t dx, int16_t dy)
     grid_array[y2][x2].links = grid_array[y1][x1].links;
     grid_array[y2][x2].buf_links = 0;
     grid_array[y2][x2].buf_outlet = 0;
+    grid_array[y2][x2].will_move = 0;
     
     grid_array[y1][x1].id = 0;
     grid_array[y1][x1].type = 0;
@@ -118,6 +140,7 @@ void Grid_Move(int16_t x, int16_t y, int16_t dx, int16_t dy)
     grid_array[y1][x1].links = 0;
     grid_array[y1][x1].buf_links = 0;
     grid_array[y1][x1].buf_outlet = 0;
+    grid_array[y1][x1].will_move = 0;
 }
 
 void Grid_Update()
@@ -142,7 +165,7 @@ void Grid_Update()
     }
 }
 
-int8_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength, uint8_t rigid)
+int8_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, uint8_t rigid, uint8_t linked)
 {
     uint8_t local_debug = 0;
     
@@ -180,12 +203,12 @@ int8_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength
     center->rec_str = strength;
     
     neighbor = Grid_Get(x + dx, y + dy);
-    if(neighbor->type != 0)
+    if(neighbor->type == 1)
     {
         if(neighbor->rec_str < strength - 1
         || neighbor->rec_str == 0)
         {
-            ret = Rec_Can_Move(x + dx, y + dy, dx, dy, strength - 1, rigid);
+            ret = Rec_Can_Move(x + dx, y + dy, dx, dy, strength - 1, rigid, linked);
             problems += ret;
             if(ret < 0)
             {
@@ -216,14 +239,23 @@ int8_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength
         neighbor = Grid_Get(nx, ny);
         other = &cells[neighbor->id];
         
-        if(neighbor->type != 0
+        if(neighbor->type == 1
         && (neighbor->rec_str < strength - 1
         || neighbor->rec_str == 0)
         )
         {
-            if(center->links & mask)
+            if(center->links & mask
+             || (linked == 0
+             && 
+             ( 
+                mod(coords_to_dir[dy + 1][dx + 1] + 1, 8) == dir
+             || mod(coords_to_dir[dy + 1][dx + 1] - 1, 8) == dir
+            //     4 == dir
+            //  || 6 == dir
+             )
+             ))
             {
-                ret = Rec_Can_Move(nx, ny, dx, dy, strength - 1, rigid);
+                ret = Rec_Can_Move(nx, ny, dx, dy, strength - 1, rigid, linked);
                 problems += ret;
                 if(local_debug) printf("str %d problems %d\n", strength, problems);
                 
@@ -274,7 +306,7 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, uint16_t *moved)
     Tile *neighbor, *linked;
     Cell *other;
     int8_t problems = 0;
-    int16_t str = center->rec_str;
+    int32_t str = center->rec_str;
     if(str < -1) str = -1 - str;
     
     if(str <= 0) 
@@ -308,7 +340,7 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, uint16_t *moved)
     if(local_debug) printf("x %d y %d str %d on_edge %d\n", x, y, str, center->on_edge);
     
     neighbor = Grid_Get(x + dx, y + dy);
-    if(neighbor->type != 0)
+    if(neighbor->type == 1)
     {
         if(neighbor->rec_str != 0 && neighbor->on_edge != 1)
         {
@@ -316,7 +348,7 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, uint16_t *moved)
             Rec_Move(x + dx, y + dy, dx, dy, moved);
         }
     }
-    else if(neighbor->type != 0)
+    else if(neighbor->type == 1)
         problems = 1;
         
     Cell *itself = &cells[center->id];
@@ -340,7 +372,7 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, uint16_t *moved)
             
             if(
             (center->links & mask || center->buf_links & mask)
-            && neighbor->type != 0
+            && neighbor->type == 1
             && neighbor->on_edge == 1
             && max(abs(nx - x - dx), abs(ny - y - dy)) < 2
             )
@@ -422,7 +454,7 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, uint16_t *moved)
         for(int nx = x - 1; nx <= x + 1; nx++)
         {
             neighbor = Grid_Get(nx, ny);
-            if(neighbor->type != 0
+            if(neighbor->type == 1
             && (neighbor->rec_str >= str - 1
             || neighbor->rec_str <= 0)
             )
@@ -460,7 +492,7 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, uint16_t *moved)
 uint8_t Active_Neighbors(int16_t x, int16_t y)
 {
     Tile *neighbor;
-    if(Grid_Get(x, y)->type == 0) return 1;
+    if(Grid_Get(x, y)->type != 1) return 1;
     for(int ny = y - 1; ny <= y + 1; ny++)
     {
         for(int nx = x - 1; nx <= x + 1; nx++)
@@ -483,13 +515,13 @@ void Rec_Clean(int16_t x, int16_t y, int8_t dx, int8_t dy)
     Tile *center = Grid_Get(x, y);
     Tile *neighbor;
     int8_t problems = 0;
-    int16_t str = center->rec_str;
+    int32_t str = center->rec_str;
     Cell *other;
     
     if(local_debug) printf("x %d y %d str %d\n", x, y, str);
     
     neighbor = Grid_Get(x + dx, y + dy);
-    if(neighbor->type != 0)
+    if(neighbor->type == 1)
     {
         if(neighbor->rec_str != 0
         || neighbor->on_edge == 1)
@@ -507,7 +539,7 @@ void Rec_Clean(int16_t x, int16_t y, int8_t dx, int8_t dy)
         for(int nx = x - 1; nx <= x + 1; nx++)
         {
             neighbor = Grid_Get(nx, ny);
-            if(neighbor->type != 0
+            if(neighbor->type == 1
             && (neighbor->rec_str != 0
             || neighbor->on_edge == 1)
             )
@@ -522,17 +554,16 @@ void Rec_Clean(int16_t x, int16_t y, int8_t dx, int8_t dy)
     return;
 }
 
-uint8_t Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength, uint8_t rigid)
+uint8_t Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, uint8_t rigid)
 {
-    int16_t cur_str = strength;
+    int32_t cur_str = strength;
     int16_t ret;
     uint16_t moved = 0;
     
     // printf("\n");
-    
     while(cur_str > 0)
     {
-        ret = Rec_Can_Move(x, y, dx, dy, cur_str, rigid);
+        ret = Rec_Can_Move(x, y, dx, dy, cur_str, rigid, 1);
         if(ret <= 0) 
         {
             Rec_Move(x, y, dx, dy, &moved);
@@ -548,7 +579,39 @@ uint8_t Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int16_t strength, u
     return moved;
 }
 
-void Rec_Link_All(int16_t x, int16_t y, int16_t strength)
+uint8_t Rec_Push_Away(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, uint8_t rigid)
+{
+    int32_t cur_str = strength;
+    int16_t ret;
+    uint16_t moved = 0;
+    
+    // printf("\n");
+    ret = Rec_Can_Move(x, y, -dx, -dy, cur_str, 1, 0);
+    Rec_Clean(x, y, -dx, -dy);
+    if(ret <= 0) 
+    {
+        // printf("nothing to push against ret %d\n", ret);
+        return 0;
+    }
+    while(cur_str > 0)
+    {
+        ret = Rec_Can_Move(x, y, dx, dy, cur_str, rigid, 1);
+        if(ret <= 0) 
+        {
+            Rec_Move(x, y, dx, dy, &moved);
+            cur_str = -1;
+        }
+        else
+        {
+            Rec_Clean(x, y, dx, dy);
+            cur_str--; 
+        }
+        
+    }
+    return moved;
+}
+
+void Rec_Link_All(int16_t x, int16_t y, int32_t strength)
 {
     Tile *center = Grid_Get(x, y);
     Tile *neighbor;
@@ -566,7 +629,7 @@ void Rec_Link_All(int16_t x, int16_t y, int16_t strength)
         for(int nx = x - 1; nx <= x + 1; nx++)
         {
             neighbor = Grid_Get(nx, ny);
-            if(neighbor->type != 0
+            if(neighbor->type == 1
             && neighbor->rec_str < strength - 1
             || just_remove)
             {
@@ -589,13 +652,13 @@ void Rec_Link_All(int16_t x, int16_t y, int16_t strength)
             continue;
         }
         
-        if(neighbor->type != 0) center->links |= mask;
+        if(neighbor->type == 1) center->links |= mask;
         else center->links &= (uint8_t)~mask;
         // printf("mask %d links %d n_id %d, dx %d, dy %d\n", mask, center->links, neighbor->id, dx, dy);
     }
 }
 
-void Rec_Connect(int16_t x, int16_t y, int16_t strength)
+void Rec_Connect(int16_t x, int16_t y, int32_t strength)
 {
     Rec_Link_All(x, y, strength);
     Rec_Clean(x, y, 1, 0);

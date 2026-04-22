@@ -2,6 +2,8 @@
 
 uint64_t prev_tick, cur_tick;
 uint16_t cycles = 0, cps = 0, threshold = 1000;
+uint16_t ms_per_fast_frame = 32, ms_per_slow_frame = 1000;
+uint16_t ms_per_frame;
 
 int main(int argc, char* args[])
 {   
@@ -29,20 +31,31 @@ int main(int argc, char* args[])
         if(pause) continue;
 
         Events_Process();
-
+        
+        cur_tick = SDL_GetTicks64();
+        
         if(display_mode == TROPHS
         || display_mode == GENOMES
         || display_mode == ACC
-        || display_mode == DEBUG
-        // || display_mode == ENERGY
-        || timer == 0)
+        || display_mode == DEBUG)
         {
+            ms_per_frame = ms_per_fast_frame;
+            // printf("fast\n");
+        }
+        else
+        {
+            ms_per_frame = ms_per_slow_frame;
+            // printf("slow\n");
+        }
+        if(cur_tick - last_frame > ms_per_frame)
+        {
+            // printf("dt %d\n", cur_tick - last_frame);
+            
+            last_frame = cur_tick;
             Screen_Clear();
             Screen_Draw();
-            // SDL_Delay(1);
+            SDL_Delay(1);
         }
-        
-        cur_tick = SDL_GetTicks64();
         
         if(cur_tick - prev_tick > threshold)
         {
@@ -50,6 +63,7 @@ int main(int argc, char* args[])
             cps = cycles * 1000 / threshold;
             cycles = 0;
             prev_tick = cur_tick;
+            printf("cps %4d\n", cps);
         }
     }
     

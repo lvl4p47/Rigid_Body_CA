@@ -4,7 +4,7 @@
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
 
-uint8_t draw_links = 1;
+uint8_t draw_links = 0;
 uint8_t display_mode = ENERGY;
 uint32_t prev_matter = 0, prev_energy = 0;
 
@@ -75,19 +75,22 @@ void Grid_Draw()
             {
                 tile = Grid_Get(j, i);
                 int type = tile->type;
-                int matter = tile->matter;
+                int matter = (type != 0) * 255;
                 int energy = tile->energy;
                 int id = tile->id;
                 int photo = cells[id].photo;
                 int str = tile->rec_str;
+                int light = tile->light * 255 / max_light;
                 uint8_t links = tile->links;
+                links = cells[tile->id].outlet;
                 int r = 0, g = 0, b = 0;
                 
                 if(type != 0) total_matter++;
                 total_matter += matter;
                 total_energy += energy;
                     
-                r = matter;
+                r = matter / 2 + light / 2;
+                g = light / 2;
                 b = energy;
                 
                 rect.x = j * CELL_SIZE;
@@ -120,7 +123,7 @@ void Grid_Draw()
         // printf("total_matter %d\n", total_matter);
         // printf("prev_energy %d   total_energy %d\n", prev_energy, total_energy);
         // if(total_matter != prev_matter && prev_matter != 0) printf("%d\n", 1 / 0);
-        if(total_energy != total_energy_acc) printf("\t\t\t\tenergy leak\n%d\n", 1 / 0);
+        // if(total_energy != total_energy_acc) printf("\t\t\t\tenergy leak\n%d\n", 1 / 0);
         prev_matter = total_matter;
         prev_energy = total_energy;
         break;
@@ -315,6 +318,27 @@ void Grid_Draw()
             }
         }
         break;
+    case LIGHT:
+        for(int i = 0; i < grid_height; i++)
+        {
+            for(int j = 0; j < grid_width; j++)
+            {
+                tile = Grid_Get(j, i);
+                
+                int r = 0, g = 0, b = 0;
+                
+                int light = tile->light * 255 / max_light;
+                
+                r = light, g = light;
+                
+                rect.x = j * CELL_SIZE;
+                rect.y = i * CELL_SIZE;
+                
+                SDL_SetRenderDrawColor(renderer, r, g, b, 255);
+                SDL_RenderFillRect(renderer, &rect);
+            }
+        }
+        break;
     case DEBUG:
         for(uint32_t id = 1; id < MAX_CELLS; id++)
         {
@@ -325,7 +349,7 @@ void Grid_Draw()
                 tile = Grid_Get(x, y);
                 int type = tile->type;
                 int value = tile->on_edge;
-                int str = tile->rec_str;
+                int32_t str = tile->rec_str;
                 uint8_t links = tile->links;
                 // links = cells[tile->id].outlet;
                 int r = 0, g = 0, b = 0;

@@ -27,6 +27,7 @@ typedef enum
 extern int8_t dir_to_coords[9][2];
 extern uint8_t coords_to_dir[3][3];
 extern uint32_t my_state;
+extern uint32_t last_frame;
 
 extern int pause;
 
@@ -40,12 +41,12 @@ static inline int8_t sign(int16_t x) {
     return (x > 0) - (x < 0);
 }
 float power(int a, int n);
-static inline uint16_t fast_root(uint16_t x)
+static inline uint32_t fast_root(uint32_t x)
 {
-    int min = 1, max = x;
-    int ans = (min + max) / 2;
-    int sqr = ans * ans;
-    int step = 0;
+    uint32_t min = 1, max = x;
+    uint32_t ans = (min + max) / 2;
+    uint32_t sqr = ans * ans;
+    uint32_t step = 0;
     
     while(abs(sqr - x) > 1 && step < 100)
     {

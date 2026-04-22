@@ -60,6 +60,8 @@ extern Genome genomes[MAX_GENOMES];
 
 extern int32_t energy_change;
 extern uint32_t total_energy_acc;
+extern uint8_t max_light;
+extern uint8_t push_away;
 
 void Genomes_Init();
 void Genomes_Print();
@@ -75,5 +77,7 @@ int16_t Find_Tag(Genome *genome, uint8_t tag);
 void Populate(int n);
 void Force_Multiply();
 void Life_Reset();
+void Gravity();
+void Illuminate();
 
 #endif

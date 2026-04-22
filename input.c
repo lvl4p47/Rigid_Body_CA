@@ -24,10 +24,12 @@ void Events_Handle()
             if(e.key.keysym.sym == SDLK_q)
             {
                 display_mode = mod(display_mode - 1, DISP_MODE_COUNT);
+                last_frame = 0;
             }
             if(e.key.keysym.sym == SDLK_w)
             {
                 display_mode = mod(display_mode + 1, DISP_MODE_COUNT);
+                last_frame = 0;
             }
             if(e.key.keysym.sym == SDLK_r)
             {
@@ -73,7 +75,7 @@ void Events_Handle()
                 
                 Rec_Connect(x, y, 100);
                 
-                // Rec_Push(x, y, 0, -1, 1, 0);
+                // Rec_Push_Away(x, y, 0, -1, 1, 0);
             }
         }
         if (e.type == SDL_MOUSEBUTTONUP) {
@@ -184,7 +186,10 @@ void Events_Process()
     
     if(Grid_Get(grab_x, grab_y)->type != 0 && str > 0)
     {
-        moved = Rec_Push(grab_x, grab_y, sx, sy, str, 0);
+        if(push_away)
+            moved = Rec_Push_Away(grab_x, grab_y, sx, sy, str, 0);
+        else
+            moved = Rec_Push(grab_x, grab_y, sx, sy, str, 0);
         if(moved)
         {
             // printf("\ntimer %3d dest_x %d dest_y %d grab_x %d grab_y %d dx %d dy %d str %d\n", timer, dest_x, dest_y, grab_x, grab_y, dx, dy, str);
