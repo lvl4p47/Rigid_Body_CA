@@ -62,6 +62,7 @@ void Rec_Clean(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t depth);
 void Rec_Immovable(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength);
 uint32_t Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, uint8_t rigid);
 uint32_t Rec_Push_Away(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, uint8_t rigid);
+uint32_t Rec_Push_Fake(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, uint8_t rigid);
 void Rec_Link_All(int16_t x, int16_t y, int32_t strength);
 void Rec_Connect(int16_t x, int16_t y, int32_t strength);
 uint8_t Is_Membrane(int16_t x, int16_t y);

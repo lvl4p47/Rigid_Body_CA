@@ -15,14 +15,14 @@ uint8_t req_energy = 127;
 
 uint8_t debug_life = 0;
 
-uint8_t dynamic_rules = 01;
-uint32_t max_lifetime = 100000;
-uint32_t max_population = 500;
+uint8_t dynamic_rules = 0;
+uint32_t max_lifetime = 10000;
+uint32_t max_population = 1000;
 uint32_t A;
 uint32_t B;
 
-uint8_t repopulate = 0;
-uint16_t pop_perc = 2;
+uint8_t repopulate = 01;
+uint16_t pop_perc = 1;
 uint16_t pop_threshold = 100;
 
 uint8_t force_mult = 0;
@@ -35,10 +35,10 @@ uint8_t life = 01;
 uint8_t nat_death = 1;
 
 uint8_t gravity = 01;
-uint16_t grav_period = 8;
+uint16_t grav_period = 10;
 uint16_t grav_rate = 100;
 
-uint8_t max_light = 2;
+uint8_t max_light = 4;
 
 uint8_t track_energy = 0;
 int32_t energy_generated;
@@ -147,23 +147,23 @@ void Cells_Update()
         birth_delta = max(population_size * born_desired / 1000, 1) - born;
         birth_debt = max(birth_debt + birth_delta, 0);
         lifetime = min(max(lifetime + birth_delta, 1), 10000);
-        printf("birth_debt %d\tlifetime %d\n", birth_debt, lifetime);
+        // printf("birth_debt %d\tlifetime %d\t population %d\n", birth_debt, lifetime, population_size);
     }
     if(birth_debt > max_birth_debt && birth_control
-    || population_size == 0)
+    || population_size == 0 && repopulate)
     {
-        if(population_size == 0)
+        if(population_size == 0 && repopulate)
         {
-            Life_Reset(pop_perc);
+            Life_Reset(1000);
             // Grid_Reset(0, 1000);
-            // Grid_Reset_Half(1, 100);
-            Populate(pop_perc);
+            Grid_Reset_Half(1, 300);
+            Reanimate(pop_perc);
             birth_debt = 0;
         }
         else if(birth_control)
         {
-            // Life_Reset(500);
-            Populate(pop_perc);
+            // if(population_size > max_population) Life_Reset(pop_perc);
+            Reanimate(pop_perc);
             birth_debt = 0;
         }
     }
@@ -599,6 +599,14 @@ void Cell_Exec(uint32_t id)
                 temp = (cell->acc > read);
                 cell->acc = temp;
             }
+            break;
+        case CMD_SET_PTR:
+            dx = dir_to_coords[cell->dir][0];
+            dy = dir_to_coords[cell->dir][1];
+            neighbor = Grid_Get(cell->x + dx, cell->y + dy);
+            itself = Grid_Get(cell->x, cell->y);
+            
+            cells[neighbor->id].pc = mod(gene->arg, GENOME_SIZE);
             break;
         case CMD_MULTIPLY:
             dx = dir_to_coords[cell->dir][0];
@@ -1121,6 +1129,33 @@ void Populate(int n)
     Border();
 }
 
+void Reanimate(int n)
+{
+    Tile *tile;
+    for(int y = border; y < grid_height - border; y++)
+    {
+        for(int x = border; x < grid_width - border; x++)
+        {
+            if(rand() % 1000 < n
+            )
+            {
+                if(Find_Free_Genome_Id() != 0)
+                {
+                    tile = Grid_Get(x, y);
+                    
+                    if(cells[tile->id].used == 0 && tile->type == 1)
+                    {
+                        Grid_Set(x, y, 0, 0);
+                        Cell_Create(x, y, 0, rand() % 2, 0);
+                    }
+                }
+            }
+        }
+    }
+    Illuminate();
+    Border();
+}
+
 void Force_Multiply()
 {
     Tile *neighbor, *itself;
@@ -1178,93 +1213,40 @@ void Life_Reset(uint16_t n)
 
 void Gravity()
 {
-    uint32_t str = min(grid_height * grid_width, 1000);
-    str = 16;
+    uint8_t local_debug = 0;
+    uint32_t str = min(grid_height * grid_width, 100);
+    Tile *tile;
     if(gravity && timer % grav_period == 0) 
     {
-        // printf("\ngravity\n");
-        Tile *tile, *upper_left, *upper, *upper_right;
+        for(int y = 0; y < grid_height; y++)
+        {
+            for(int x = 0; x < grid_width; x++)
+            {
+                tile = Grid_Get(x, y);
+                tile->will_move = 0;
+            }
+        }
+        if(local_debug) printf("\ngravity\n");
+        Tile *upper_left, *upper, *upper_right;
         int32_t ret;
         uint32_t rcm_count = 0;
-        
-        for(int y = 0; y < grid_height; y++)
+        uint16_t x, y;
+        for(int n = 0; n < grav_rate; n++)
         {
-            for(int x = 0; x < grid_width; x++)
+            x = rand() % grid_width;
+            y = rand() % grid_height;
+            
+            tile = Grid_Get(x, y);
+            if(tile->type == 1)
             {
-                
-                tile = Grid_Get(x, y);
-                
-                if(tile->type == 1)
+                ret = Rec_Push(x, y, 0, 1, str, 1);
+                if(local_debug) printf("ret %d\n", ret);
+                if(ret <= 0) continue;
+                if(rand() % ret != 0)
                 {
-                    // Grid_Move(x, y, 0, 1);
-                    if(tile->rec_str <= 0
-                    && tile->will_move == 0)
-                    {
-                        // printf("1\n");
-                        // printf("rcm x %d y %d\n", x, y);
-                        rcm_count++;
-                        ret = Rec_Can_Move(x, y, 0, 1, str, 1, 1);
-                        // ret = 0;
-                        Rec_Immovable(x, y, 0, 1, str);
-                        // printf("2\n");
-                        // if(ret > 0) Rec_Clean(x, y, 0, 1);
-                        if(ret <= 0)
-                        {
-                            // printf("\nwill_move = 1 x %d y %d\n", x, y);
-                            tile->will_move = 1;
-                        }
-                        else 
-                        {
-                            // printf("\nwill_move = 2 x %d y %d\n", x, y);
-                            tile->will_move = 2;
-                        }
-                    }
-                    
+                    if(local_debug) printf("ret success %d\n", ret);
+                    Rec_Push(x, y + 1, 0, -1, str, 1);
                 }
-            }
-        }
-        // printf("rcm %d\n", rcm_count);
-        for(int y = 0; y < grid_height; y++)
-        {
-            for(int x = 0; x < grid_width; x++)
-            {
-                tile = Grid_Get(x, y);
-                if(tile->type == 1)
-                {
-                    if(tile->will_move == 2)
-                    {
-                        // printf("clean x %d y %d\n", x, y);
-                        // printf("2\n");
-                        Rec_Clean(x, y, 0, 1, str);
-                    }
-                }
-            }
-        }
-        
-        for(int y = 0; y < grid_height; y++)
-        {
-            for(int x = 0; x < grid_width; x++)
-            {
-                tile = Grid_Get(x, y);
-                if(tile->type == 1)
-                {
-                    // Grid_Move(x, y, 0, 1);
-                    // if(tile->will_move == 1)
-                    {
-                        // if(tile->rec_str == str)
-                        {
-                            if(tile->will_move == 1)
-                            {
-                                // printf("3\n");
-                                Rec_Push(x, y, 0, 1, str, 1);
-                                
-                                // printf("pushed x %d, y %d\n", x, y);
-                            }
-                        }
-                    }
-                    
-                }
-                tile->will_move = 0;
             }
         }
     }

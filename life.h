@@ -26,6 +26,7 @@ typedef enum {
     CMD_ADD_POP,
     CMD_SUB_POP,
     CMD_CMP_POP,
+    CMD_SET_PTR,
     CMD_MULTIPLY,
     CMD_ROT,
     CMD_CENTRE,
@@ -75,6 +76,7 @@ void Cell_Buf_Upd(uint32_t id);
 void Redist_Energy(uint32_t id);
 int16_t Find_Tag(Genome *genome, uint8_t tag);
 void Populate(int n);
+void Reanimate(int n);
 void Force_Multiply();
 void Life_Reset(uint16_t n);
 void Gravity();

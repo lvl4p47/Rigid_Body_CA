@@ -4,7 +4,7 @@
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
 
-uint8_t draw_links = 0;
+uint8_t draw_links = 01;
 uint8_t display_mode = ENERGY;
 uint32_t prev_matter = 0, prev_energy = 0;
 
@@ -94,8 +94,9 @@ void Grid_Draw()
                 g = light / 2;
                 b = energy;
                 
-                // g = (str > 0) * 255;
-                // b = (str < 0) * 255;
+                // r = matter;
+                // g = (move > 0) * 255;
+                // b = (move < 0) * 255;
                 
                 rect.x = j * CELL_SIZE;
                 rect.y = i * CELL_SIZE;

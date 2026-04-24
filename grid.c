@@ -27,7 +27,7 @@ void Grid_Init(uint16_t w, uint16_t h)
     }
     
     Grid_Reset(0, 1000);
-    Grid_Reset_Half(1, 300);
+    // Grid_Reset_Half(1, 300);
 }
 
 void Grid_Quit()
@@ -84,6 +84,7 @@ void Grid_Reset_Half(uint8_t type, uint16_t chance)
         for(int j = 0; j < grid_width; j++)
         {
             Grid_Set(j, i, 0, type);
+            Grid_Get(j, i)->matter = 1;
         }
     }
 }
@@ -582,7 +583,7 @@ void Rec_Immovable(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength)
     
     if(neighbor->type == 1)
     {
-        if(neighbor->rec_str == strength - 1
+        if(neighbor->rec_str <= strength - 1
         || neighbor->on_edge == 1
         || neighbor->rec_str == -1)
         {
@@ -592,26 +593,36 @@ void Rec_Immovable(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength)
     }
     
     {
-        center->rec_str = 0;
+        center->rec_str = strength;
         if(strength > 0)
             center->will_move = 3;
     }
     
-    for(int ny = y - 1; ny <= y + 1; ny++)
+    int16_t Dx, Dy;
+    int16_t nx, ny;
+    uint8_t mask, opposite;
+    uint8_t is_outlet, is_outlet_n;
+    for(uint8_t dir = 0; dir < 8; dir++)
     {
-        for(int nx = x - 1; nx <= x + 1; nx++)
+        mask = (uint8_t)1 << dir;
+        opposite = (uint8_t)1 << mod(dir + 4, 8);
+        Dx = dir_to_coords[dir][0];
+        Dy = dir_to_coords[dir][1];
+        nx = x + Dx;
+        ny = y + Dy;
+        neighbor = Grid_Get(nx, ny);
+        other = &cells[neighbor->id];
+        
+        if(neighbor->type == 1
+        && center->links & mask
+        && (neighbor->rec_str <= strength - 1
+        || neighbor->on_edge == 1)
+        || neighbor->rec_str == -1
+        )
         {
-            neighbor = Grid_Get(nx, ny);
-            if(neighbor->type == 1
-            && (neighbor->rec_str == strength - 1
-            || neighbor->on_edge == 1)
-            || neighbor->rec_str == -1
-            )
-            {
-                if(local_debug) if(neighbor->rec_str > str) printf("%d > %d ", neighbor->rec_str, str - 1);
-                if(local_debug) printf("x %d y %d str %d side reaching x %d y %d str %d\n", x, y, str, nx, ny, neighbor->rec_str);
-                Rec_Immovable(nx, ny, dx, dy, strength - 1);
-            }
+            if(local_debug) if(neighbor->rec_str > str) printf("%d > %d ", neighbor->rec_str, str - 1);
+            if(local_debug) printf("x %d y %d str %d side reaching x %d y %d str %d\n", x, y, str, nx, ny, neighbor->rec_str);
+            Rec_Immovable(nx, ny, dx, dy, strength - 1);
         }
     }
     return;
@@ -624,19 +635,21 @@ uint32_t Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, 
     uint32_t moved = 0;
     
     // printf("\n");
-    while(cur_str > 0)
+    // while(cur_str > 0)
     {
         
         ret = Rec_Can_Move(x, y, dx, dy, cur_str, rigid, 1);
         
         if(ret <= 0) 
         {
+            // printf("can move\n");
             Rec_Move(x, y, dx, dy, &moved);
             cur_str = -1;
             
         }
         else
         {
+            // printf("can not move\n");
             Rec_Clean(x, y, dx, dy, cur_str);
             cur_str--; 
             
@@ -654,7 +667,7 @@ uint32_t Rec_Push_Away(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t stren
     
     // while(cur_str > 0)
     {
-        ret = Rec_Can_Move(x, y, -dx, -dy, cur_str, 1, 0);
+        ret = Rec_Can_Move(x, y, -dx, -dy, cur_str, 1, 1);
         Rec_Clean(x, y, -dx, -dy, cur_str);
         if(ret > 0) 
         {
@@ -671,6 +684,34 @@ uint32_t Rec_Push_Away(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t stren
             }
         }
         cur_str--;
+        
+    }
+    return moved;
+}
+
+uint32_t Rec_Push_Fake(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, uint8_t rigid)
+{
+    int32_t cur_str = strength;
+    int32_t ret;
+    uint32_t moved = 0;
+    
+    {
+        
+        ret = Rec_Can_Move(x, y, dx, dy, cur_str, rigid, 1);
+        
+        if(ret <= 0) 
+        {
+            Rec_Move(x, y, dx, dy, &moved);
+            Rec_Push(x + dx, y + dy, -dx, -dy, cur_str, rigid);
+            cur_str = -1;
+            
+        }
+        else
+        {
+            Rec_Clean(x, y, dx, dy, cur_str);
+            cur_str--; 
+            
+        }
         
     }
     return moved;

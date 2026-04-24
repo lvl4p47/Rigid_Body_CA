@@ -146,25 +146,25 @@ void Events_Handle()
             }
             if (lmb_held == 1)
             {
-                // dest_x = x;
-                // dest_y = y;
+                dest_x = x;
+                dest_y = y;
                 
-                if(Find_Free_Genome_Id() != 0)
-                {
-                    int rad = grid_height / 8;
-                    int amount = rad / 16;
-                    int perc = 2 * rad;
+                // if(Find_Free_Genome_Id() != 0)
+                // {
+                //     int rad = grid_height / 8;
+                //     int amount = rad / 16;
+                //     int perc = 2 * rad;
                     
-                    int dx, dy;
-                    for(int n = 0; n < amount; n++)
-                    {
-                        dx = rand() % (2 * rad) - rad;
-                        dy = rand() % (2 * rad) - rad;
+                //     int dx, dy;
+                //     for(int n = 0; n < amount; n++)
+                //     {
+                //         dx = rand() % (2 * rad) - rad;
+                //         dy = rand() % (2 * rad) - rad;
                         
-                        if((rand() % perc + rand() % perc) / 2 > abs(dx) + abs(dy))
-                            Cell_Create(x + dx, y + dy, 0, rand() % 2, 0);
-                    }
-                }
+                //         if((rand() % perc + rand() % perc) / 2 > abs(dx) + abs(dy))
+                //             Cell_Create(x + dx, y + dy, 0, rand() % 2, 0);
+                //     }
+                // }
             }
         }
     }
