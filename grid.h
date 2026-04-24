@@ -55,12 +55,13 @@ void Grid_Set(int16_t x, int16_t y, uint32_t id, uint8_t type);
 void Grid_Move(int16_t x, int16_t y, int16_t dx, int16_t dy);
 void Grid_Update();
 
-int8_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, uint8_t rigid, uint8_t linked);
-void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, uint16_t *moved);
+int32_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, uint8_t rigid, uint8_t linked);
+void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, uint32_t *moved);
 uint8_t Active_Neighbors(int16_t x, int16_t y);
-void Rec_Clean(int16_t x, int16_t y, int8_t dx, int8_t dy);
-uint8_t Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, uint8_t rigid);
-uint8_t Rec_Push_Away(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, uint8_t rigid);
+void Rec_Clean(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t depth);
+void Rec_Immovable(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength);
+uint32_t Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, uint8_t rigid);
+uint32_t Rec_Push_Away(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, uint8_t rigid);
 void Rec_Link_All(int16_t x, int16_t y, int32_t strength);
 void Rec_Connect(int16_t x, int16_t y, int32_t strength);
 uint8_t Is_Membrane(int16_t x, int16_t y);
@@ -72,7 +73,7 @@ uint8_t Phero_Get(int16_t x, int16_t y, uint8_t type, uint8_t update);
 
 // CELLS
 
-#define MAX_CELLS 100000
+#define MAX_CELLS 4000000
 
 typedef struct {
     uint16_t x;

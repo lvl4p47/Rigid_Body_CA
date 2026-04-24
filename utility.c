@@ -24,13 +24,13 @@ uint32_t state;
 int pause = 0;
 uint32_t last_frame = 0;
 
-int min(int a, int b)
+int32_t min(int32_t a, int32_t b)
 {
     if(a < b) return a;
     return b;
 }
 
-int max(int a, int b)
+int32_t max(int32_t a, int32_t b)
 {
     if(a > b) return a;
     return b;

@@ -76,7 +76,7 @@ void Redist_Energy(uint32_t id);
 int16_t Find_Tag(Genome *genome, uint8_t tag);
 void Populate(int n);
 void Force_Multiply();
-void Life_Reset();
+void Life_Reset(uint16_t n);
 void Gravity();
 void Illuminate();
 

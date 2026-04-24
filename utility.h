@@ -35,8 +35,8 @@ static inline int64_t mod(int64_t x, int64_t m) {
     int64_t r = x % m;
     return r >= 0 ? r : r + m;
 }
-int min(int a, int b);
-int max(int a, int b);
+int32_t min(int32_t a, int32_t b);
+int32_t max(int32_t a, int32_t b);
 static inline int8_t sign(int16_t x) {
     return (x > 0) - (x < 0);
 }

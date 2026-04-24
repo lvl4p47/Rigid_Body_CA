@@ -79,10 +79,11 @@ void Grid_Draw()
                 int energy = tile->energy;
                 int id = tile->id;
                 int photo = cells[id].photo;
-                int str = tile->rec_str;
+                int32_t str = tile->rec_str;
+                int8_t move = tile->will_move;
                 int light = tile->light * 255 / max_light;
                 uint8_t links = tile->links;
-                links = cells[tile->id].outlet;
+                // links = cells[tile->id].outlet;
                 int r = 0, g = 0, b = 0;
                 
                 if(type != 0) total_matter++;
@@ -93,6 +94,9 @@ void Grid_Draw()
                 g = light / 2;
                 b = energy;
                 
+                // g = (str > 0) * 255;
+                // b = (str < 0) * 255;
+                
                 rect.x = j * CELL_SIZE;
                 rect.y = i * CELL_SIZE;
                 
@@ -101,7 +105,7 @@ void Grid_Draw()
                 
                 if(draw_links == 0) continue;
                 
-                SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
                 uint8_t mask;
                 int16_t dx, dy, cx, cy;
                 cx = rect.x + CELL_SIZE / 2;

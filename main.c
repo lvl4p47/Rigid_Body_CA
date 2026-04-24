@@ -2,7 +2,7 @@
 
 uint64_t prev_tick, cur_tick;
 uint16_t cycles = 0, cps = 0, threshold = 1000;
-uint16_t ms_per_fast_frame = 32, ms_per_slow_frame = 1000;
+uint16_t ms_per_fast_frame = 32, ms_per_slow_frame = 320;
 uint16_t ms_per_frame;
 
 int main(int argc, char* args[])
