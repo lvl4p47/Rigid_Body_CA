@@ -13,7 +13,7 @@
 
 #define WINDOW_WIDTH 1920 // for debugging
 #define WINDOW_HEIGHT 720
-#define CELL_SIZE 5
+#define CELL_SIZE 10
 
 // #define WINDOW_WIDTH 1920
 // #define WINDOW_HEIGHT 128
@@ -34,6 +34,8 @@ typedef enum
 extern SDL_Window* window;
 extern SDL_Renderer* renderer;
 extern uint8_t display_mode;
+extern uint32_t total_matter;
+extern uint32_t total_energy;
 
 void Graphics_Init();
 void Graphics_Quit();

@@ -63,7 +63,7 @@ int main(int argc, char* args[])
             cps = cycles * 1000 / threshold;
             cycles = 0;
             prev_tick = cur_tick;
-            printf("cps %4d\n", cps);
+            printf("cps %4d lifetime %5d matter %5d energy %7d\n", cps, lifetime, total_matter, total_energy);
         }
     }
     

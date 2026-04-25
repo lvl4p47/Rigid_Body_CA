@@ -7,6 +7,8 @@ SDL_Renderer* renderer = NULL;
 uint8_t draw_links = 01;
 uint8_t display_mode = ENERGY;
 uint32_t prev_matter = 0, prev_energy = 0;
+uint32_t total_matter = 0;
+uint32_t total_energy = 0;
 
 
 void Graphics_Init()
@@ -67,15 +69,15 @@ void Grid_Draw()
     switch (display_mode)
     {
     case ENERGY:
-        uint32_t total_matter = 0;
-        uint32_t total_energy = 0;
+        total_matter = 0;
+        total_energy = 0;
         for(int i = 0; i < grid_height; i++)
         {
             for(int j = 0; j < grid_width; j++)
             {
                 tile = Grid_Get(j, i);
                 int type = tile->type;
-                int matter = (type != 0) * 255;
+                int matter = tile->matter;
                 int energy = tile->energy;
                 int id = tile->id;
                 int photo = cells[id].photo;
@@ -90,7 +92,7 @@ void Grid_Draw()
                 total_matter += matter;
                 total_energy += energy;
                     
-                r = matter / 2 + light / 2;
+                r = type * 63 + light / 2;
                 g = light / 2;
                 b = energy;
                 

@@ -63,13 +63,14 @@ extern int32_t energy_change;
 extern uint32_t total_energy_acc;
 extern uint8_t max_light;
 extern uint8_t push_away;
+extern uint32_t lifetime;
 
 void Genomes_Init();
 void Genomes_Print();
 uint16_t Find_Free_Genome_Id();
 uint16_t Genome_Create(uint16_t par_id);
 void Genome_Destroy(uint16_t g_id);
-void Genome_Copy(uint16_t g_id_to, uint16_t g_id_from, uint16_t mut_rate);
+uint8_t Genome_Copy(uint16_t g_id_to, uint16_t g_id_from, uint16_t mut_rate);
 
 void Cell_Exec(uint32_t id);
 void Cell_Buf_Upd(uint32_t id);

@@ -35,10 +35,10 @@ uint8_t life = 01;
 uint8_t nat_death = 1;
 
 uint8_t gravity = 01;
-uint16_t grav_period = 10;
+uint16_t grav_period = 1;
 uint16_t grav_rate = 100;
 
-uint8_t max_light = 4;
+uint8_t max_light = 2;
 
 uint8_t track_energy = 0;
 int32_t energy_generated;
@@ -446,7 +446,11 @@ uint16_t Genome_Create(uint16_t par_id)
     
     genomes[g_id].used = 1;
     
-    Genome_Copy(g_id, par_g_id, mutation_rate);
+    if(Genome_Copy(g_id, par_g_id, mutation_rate) == 0) 
+    {
+        Genome_Destroy(g_id);
+        g_id = par_id;
+    }
     
     return g_id;
 }
@@ -462,18 +466,28 @@ void Genome_Destroy(uint16_t g_id)
     free_g_id = g_id;
 }
 
-void Genome_Copy(uint16_t g_id_to, uint16_t g_id_from, uint16_t mut_rate)
+uint8_t Genome_Copy(uint16_t g_id_to, uint16_t g_id_from, uint16_t mut_rate)
 {
     if(debug_life) fprintf(stderr, "Genome_Copy to %d from %d\n", g_id_to, g_id_from), fflush(stderr);
+    uint8_t is_dif = 0;
     
     for(uint8_t g = 0; g < GENOME_SIZE; g++)
     {
         genomes[g_id_to].genes[g].cmd = genomes[g_id_from].genes[g].cmd;
         genomes[g_id_to].genes[g].arg = genomes[g_id_from].genes[g].arg;
         
-        if(rnd() % mutation_max < mut_rate) genomes[g_id_to].genes[g].cmd = rnd() % CMD_COUNT;
-        if(rnd() % mutation_max < mut_rate) genomes[g_id_to].genes[g].arg = rnd() % GENOME_SIZE;
+        if(rnd() % mutation_max < mut_rate) 
+        {
+            genomes[g_id_to].genes[g].cmd = rnd() % CMD_COUNT;
+            if(genomes[g_id_to].genes[g].cmd != genomes[g_id_from].genes[g].cmd) is_dif = 1;
+        }
+        if(rnd() % mutation_max < mut_rate)
+        {
+            genomes[g_id_to].genes[g].arg = rnd() % GENOME_SIZE;
+            if(genomes[g_id_to].genes[g].arg != genomes[g_id_from].genes[g].arg) is_dif = 1;
+        }
     }
+    return is_dif;
 }
 
 void Cell_Exec(uint32_t id)
@@ -758,7 +772,7 @@ void Cell_Exec(uint32_t id)
                 temp = itself->matter + 1;
                 if(neighbor->matter == 0 && neighbor->energy == 0
                 && neighbor->type != 0
-                && temp < 256)
+                && temp <= max_matter)
                 {
                     if(neighbor->id != 0 && cells[neighbor->id].used)
                     {
@@ -1052,8 +1066,8 @@ void Redist_Energy(uint32_t id)
             if(life
             && cell->buf_energy + s_ediff > -1 && cell->buf_energy + s_ediff < 256
             && neighbor->energy - s_ediff > -1 && neighbor->energy - s_ediff < 256
-            && cell->buf_matter + s_mdiff > -1 && cell->buf_matter + s_mdiff < 256
-            && neighbor->matter - s_mdiff > -1 && neighbor->matter - s_mdiff < 256
+            && cell->buf_matter + s_mdiff > -1 && cell->buf_matter + s_mdiff <= max_matter
+            && neighbor->matter - s_mdiff > -1 && neighbor->matter - s_mdiff <= max_matter
             )
             {
                 cell->buf_energy += s_ediff;
@@ -1143,7 +1157,8 @@ void Reanimate(int n)
                 {
                     tile = Grid_Get(x, y);
                     
-                    if(cells[tile->id].used == 0 && tile->type == 1)
+                    if(cells[tile->id].used == 0 && tile->type == 1
+                    && tile->matter == starting_matter)
                     {
                         Grid_Set(x, y, 0, 0);
                         Cell_Create(x, y, 0, rand() % 2, 0);
@@ -1218,14 +1233,6 @@ void Gravity()
     Tile *tile;
     if(gravity && timer % grav_period == 0) 
     {
-        for(int y = 0; y < grid_height; y++)
-        {
-            for(int x = 0; x < grid_width; x++)
-            {
-                tile = Grid_Get(x, y);
-                tile->will_move = 0;
-            }
-        }
         if(local_debug) printf("\ngravity\n");
         Tile *upper_left, *upper, *upper_right;
         int32_t ret;
