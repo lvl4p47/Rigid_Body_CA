@@ -33,6 +33,9 @@ void Graphics_Init()
         SDL_Quit();
         return ;
     }
+    
+    draw_links = 0;
+    if(CELL_SIZE > 2) draw_links = 1;
 }
 
 void Graphics_Quit()
@@ -83,16 +86,18 @@ void Grid_Draw()
                 int photo = cells[id].photo;
                 int32_t str = tile->rec_str;
                 int8_t move = tile->will_move;
-                int light = tile->light * 255 / max_light;
+                int light = 0;
+                if(max_light > 0)
+                    light = tile->light * 255 / max_light;
                 uint8_t links = tile->links;
-                // links = cells[tile->id].outlet;
+                // links = cells[tile->id].matter_out;
                 int r = 0, g = 0, b = 0;
                 
                 if(type != 0) total_matter++;
                 total_matter += matter;
                 total_energy += energy;
                     
-                r = type * 63 + light / 2;
+                r = matter * 127 / max_matter + light / 2;
                 g = light / 2;
                 b = energy;
                 
@@ -148,7 +153,7 @@ void Grid_Draw()
                 int photo = cells[id].photo;
                 int str = tile->rec_str;
                 uint8_t links = tile->links;
-                // links = cells[tile->id].outlet;
+                // links = cells[tile->id].energy_out;
                 int r = 0, g = 0, b = 0;
                     
                 switch (type)
@@ -227,24 +232,35 @@ void Grid_Draw()
                 tile = Grid_Get(x, y);
                 int type = tile->type;
                 int energy = tile->energy;
-                int gen_id = cells[id].g_id;
+                uint16_t gen_id = cells[id].g_id;
+                uint16_t h = gen_id;
                 int r = 0, g = 0, b = 0;
                     
-                switch (type)
-                {
-                case 0:
-                    
-                    break;
+                // if(type != 1) continue;
                 
-                default:
-                    r = gen_id % 255;
-                    g = (uint8_t)((gen_id >> 8) ^ (gen_id & 0xFF));;
-                    b = (uint8_t)((gen_id * 2654435761u) >> 24);
-                    
-                    // r = r * energy / 255;
-                    // g = g * energy / 255;
-                    // b = b * energy / 255;
-                }
+                // r = (uint8_t)(h ^ (h >> 7) * 0xE1u);
+                
+                h = gen_id;
+                h *= 0x9Eu;
+                h ^= h >> 8;
+                h *= 0x87u;
+                h = h & 0xFFu;
+                r = h;
+                
+                h = gen_id;
+                h ^= h >> 8;
+                h *= 0xEDu;
+                h ^= h >> 4;
+                g = h;
+                
+                h = gen_id;
+                h = (h ^ (h >> 7)) * 0xC5u;
+                h = (h ^ (h >> 6)) & 0xFFu;
+                b = h;
+                
+                // r = r * energy / 255;
+                // g = g * energy / 255;
+                // b = b * energy / 255;
                 
                 rect.x = x * CELL_SIZE;
                 rect.y = y * CELL_SIZE;
@@ -253,6 +269,109 @@ void Grid_Draw()
                 SDL_RenderFillRect(renderer, &rect);
             }
         }
+        break;
+    
+    case TRANS:
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_ADD);
+        for(uint32_t id = 1; id < MAX_CELLS; id++)
+        {
+            if(cells[id].used)
+            {
+                x = cells[id].x;
+                y = cells[id].y;
+                tile = Grid_Get(x, y);
+                int type = tile->type;
+                int matter = tile->matter;
+                int energy = tile->energy;
+                int id = tile->id;
+                int photo = cells[id].photo;
+                int32_t str = tile->rec_str;
+                int8_t move = tile->will_move;
+                int light = 0;
+                if(max_light > 0)
+                    light = tile->light * 255 / max_light;
+                uint8_t links = tile->links;
+                uint8_t energy_out = cells[id].energy_out;
+                uint8_t matter_out = cells[id].matter_out;
+                // links = cells[tile->id].matter_out;
+                int r = 0, g = 0, b = 0;
+                
+                r = 16 + matter * 64 / max_matter;
+                g = 16;
+                b = 16 + energy * 64 / 255;
+                
+                // r = matter;
+                // g = (move > 0) * 255;
+                // b = (move < 0) * 255;
+                
+                rect.x = x * CELL_SIZE;
+                rect.y = y * CELL_SIZE;
+                
+                SDL_SetRenderDrawColor(renderer, r, g, b, 255);
+                SDL_RenderFillRect(renderer, &rect);
+                
+                if(draw_links == 0) continue;
+                
+                uint8_t mask;
+                int16_t dx, dy, cx, cy, half = CELL_SIZE / 2;
+                cx = rect.x + CELL_SIZE / 2;
+                cy = rect.y + CELL_SIZE / 2;
+                
+                SDL_SetRenderDrawColor(renderer, 0, 0, energy, 255);
+                for(uint8_t dir = 0; dir < 8; dir++)
+                {
+                    dx = dir_to_coords[dir][0] * CELL_SIZE / 2;
+                    dy = dir_to_coords[dir][1] * CELL_SIZE / 2;
+                    mask = (uint8_t)1 << dir;
+                    
+                    if(energy_out & mask)
+                    {
+                        if(dx != 0 && dy != 0)
+                        {
+                            SDL_RenderDrawLineF(renderer, cx + dx, cy - dy, cx + dx, cy + dy);
+                            SDL_RenderDrawLineF(renderer, cx - dx, cy + dy, cx + dx, cy + dy);
+                        }
+                        else if(dx == 0 && dy != 0)
+                        {
+                            SDL_RenderDrawLineF(renderer, cx - half, cy, cx + dx, cy + dy);
+                            SDL_RenderDrawLineF(renderer, cx + half, cy, cx + dx, cy + dy);
+                        }
+                        else if(dx != 0 && dy == 0)
+                        {
+                            SDL_RenderDrawLineF(renderer, cx, cy - half, cx + dx, cy + dy);
+                            SDL_RenderDrawLineF(renderer, cx, cy + half, cx + dx, cy + dy);
+                        }
+                    }
+                }
+                SDL_SetRenderDrawColor(renderer, matter * 255 / max_matter, 0, 0, 255);
+                for(uint8_t dir = 0; dir < 8; dir++)
+                {
+                    dx = dir_to_coords[dir][0] * CELL_SIZE / 2;
+                    dy = dir_to_coords[dir][1] * CELL_SIZE / 2;
+                    mask = (uint8_t)1 << dir;
+                    
+                    if(matter_out & mask)
+                    {
+                        if(dx != 0 && dy != 0)
+                        {
+                            SDL_RenderDrawLineF(renderer, cx + dx, cy - dy, cx + dx, cy + dy);
+                            SDL_RenderDrawLineF(renderer, cx - dx, cy + dy, cx + dx, cy + dy);
+                        }
+                        else if(dx == 0 && dy != 0)
+                        {
+                            SDL_RenderDrawLineF(renderer, cx - half, cy, cx + dx, cy + dy);
+                            SDL_RenderDrawLineF(renderer, cx + half, cy, cx + dx, cy + dy);
+                        }
+                        else if(dx != 0 && dy == 0)
+                        {
+                            SDL_RenderDrawLineF(renderer, cx, cy - half, cx + dx, cy + dy);
+                            SDL_RenderDrawLineF(renderer, cx, cy + half, cx + dx, cy + dy);
+                        }
+                    }
+                }
+            }
+        }
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
         break;
     case ACC:
         for(int id = 1; id < MAX_CELLS; id++)
@@ -334,7 +453,9 @@ void Grid_Draw()
                 
                 int r = 0, g = 0, b = 0;
                 
-                int light = tile->light * 255 / max_light;
+                int light = 0;
+                if(max_light > 0)
+                    light = tile->light * 255 / max_light;
                 
                 r = light, g = light;
                 
@@ -358,7 +479,7 @@ void Grid_Draw()
                 int value = tile->on_edge;
                 int32_t str = tile->rec_str;
                 uint8_t links = tile->links;
-                // links = cells[tile->id].outlet;
+                // links = cells[tile->id].energy_out;
                 int r = 0, g = 0, b = 0;
                     
                 switch (value)

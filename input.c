@@ -1,6 +1,7 @@
 #include "input.h"
 
 int quit = 0;
+uint8_t slow_mode = 1;
 int lmb_held = 0;
 int rmb_held = 0;
 int mmb_held = 0;
@@ -39,6 +40,10 @@ void Events_Handle()
             if(e.key.keysym.sym == SDLK_p)
             {
                 Populate(100);
+            }
+            if(e.key.keysym.sym == SDLK_s)
+            {
+                slow_mode = 1 - slow_mode;
             }
             if(e.key.keysym.sym == SDLK_ESCAPE)
             {
@@ -115,7 +120,24 @@ void Events_Handle()
                 //     && Grid_Get(x + dx, y + dy)->id == 0)
                 //         Grid_Set(x + dx, y + dy, 0, 1);
                 // }
-                Cell_Create(x, y, 0, rand() % 2, 0);
+                // Cell_Create(x, y, 0, rand() % 2, 0);
+                
+                if(Find_Free_Genome_Id() != 0)
+                {
+                    int rad = grid_height / 8;
+                    int amount = max(rad / 16, 1);
+                    int perc = 2 * rad;
+                    
+                    int dx, dy;
+                    for(int n = 0; n < amount; n++)
+                    {
+                        dx = rand() % (2 * rad) - rad;
+                        dy = rand() % (2 * rad) - rad;
+                        
+                        if((rand() % perc + rand() % perc) / 2 > abs(dx) + abs(dy))
+                            Cell_Create(x + dx, y + dy, 0, rand() % 2, 0);
+                    }
+                }
                 
                 
             }
@@ -148,23 +170,6 @@ void Events_Handle()
             {
                 dest_x = x;
                 dest_y = y;
-                
-                // if(Find_Free_Genome_Id() != 0)
-                // {
-                //     int rad = grid_height / 8;
-                //     int amount = rad / 16;
-                //     int perc = 2 * rad;
-                    
-                //     int dx, dy;
-                //     for(int n = 0; n < amount; n++)
-                //     {
-                //         dx = rand() % (2 * rad) - rad;
-                //         dy = rand() % (2 * rad) - rad;
-                        
-                //         if((rand() % perc + rand() % perc) / 2 > abs(dx) + abs(dy))
-                //             Cell_Create(x + dx, y + dy, 0, rand() % 2, 0);
-                //     }
-                // }
             }
         }
     }

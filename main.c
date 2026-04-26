@@ -34,10 +34,7 @@ int main(int argc, char* args[])
         
         cur_tick = SDL_GetTicks64();
         
-        if(display_mode == TROPHS
-        || display_mode == GENOMES
-        || display_mode == ACC
-        || display_mode == DEBUG)
+        if(slow_mode == 0)
         {
             ms_per_frame = ms_per_fast_frame;
             // printf("fast\n");
@@ -54,7 +51,7 @@ int main(int argc, char* args[])
             last_frame = cur_tick;
             Screen_Clear();
             Screen_Draw();
-            SDL_Delay(1);
+            // SDL_Delay(100);
         }
         
         if(cur_tick - prev_tick > threshold)
@@ -63,7 +60,7 @@ int main(int argc, char* args[])
             cps = cycles * 1000 / threshold;
             cycles = 0;
             prev_tick = cur_tick;
-            printf("cps %4d lifetime %5d matter %5d energy %7d\n", cps, lifetime, total_matter, total_energy);
+            printf("cps %4d lifetime %5d matter %5d energy %7d\n", cps, lifetime, total_matter, total_energy_acc);
         }
     }
     

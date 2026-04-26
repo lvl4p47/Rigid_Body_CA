@@ -4,15 +4,17 @@ Tile **grid_array = NULL;
 uint16_t grid_width = 0;
 uint16_t grid_height = 0;
 
-uint8_t timer = 255;
+uint8_t timer = 0;
+uint32_t long_timer = 0;
 uint8_t debug = 0;
 
 FILE *file_ptr;
 uint16_t integer;
 
 uint8_t global_time = 0;
-uint8_t phero_life = 32;
+uint8_t phero_life = 1;
 uint8_t border = 1;
+uint8_t max_matter = 8;
 
 void Grid_Init(uint16_t w, uint16_t h)
 {
@@ -27,7 +29,7 @@ void Grid_Init(uint16_t w, uint16_t h)
     }
     
     Grid_Reset(0, 1000);
-    // Grid_Reset_Half(1, 300);
+    Grid_Reset_Half(1, 300);
 }
 
 void Grid_Quit()
@@ -84,7 +86,7 @@ void Grid_Reset_Half(uint8_t type, uint16_t chance)
         for(int j = 0; j < grid_width; j++)
         {
             Grid_Set(j, i, 0, type);
-            Grid_Get(j, i)->matter = 1;
+            Grid_Get(j, i)->matter = max_matter;
         }
     }
 }
@@ -103,7 +105,8 @@ void Grid_Set(int16_t x, int16_t y, uint32_t id, uint8_t type)
     grid_array[y1][x1].on_edge = 0;
     grid_array[y1][x1].links = 0;
     grid_array[y1][x1].buf_links = 0;
-    grid_array[y1][x1].buf_outlet = 0;
+    grid_array[y1][x1].buf_energy_out = 0;
+    grid_array[y1][x1].buf_matter_out = 0;
 }
 
 void Grid_Move(int16_t x, int16_t y, int16_t dx, int16_t dy)
@@ -129,7 +132,8 @@ void Grid_Move(int16_t x, int16_t y, int16_t dx, int16_t dy)
     grid_array[y2][x2].on_edge = 0;
     grid_array[y2][x2].links = grid_array[y1][x1].links;
     grid_array[y2][x2].buf_links = 0;
-    grid_array[y2][x2].buf_outlet = 0;
+    grid_array[y2][x2].buf_energy_out = 0;
+    grid_array[y2][x2].buf_matter_out = 0;
     grid_array[y2][x2].will_move = 0;
     
     grid_array[y1][x1].id = 0;
@@ -140,7 +144,8 @@ void Grid_Move(int16_t x, int16_t y, int16_t dx, int16_t dy)
     grid_array[y1][x1].on_edge = 0;
     grid_array[y1][x1].links = 0;
     grid_array[y1][x1].buf_links = 0;
-    grid_array[y1][x1].buf_outlet = 0;
+    grid_array[y1][x1].buf_energy_out = 0;
+    grid_array[y1][x1].buf_matter_out = 0;
     grid_array[y1][x1].will_move = 0;
 }
 
@@ -236,7 +241,7 @@ int32_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strengt
     int16_t Dx, Dy;
     int16_t nx, ny;
     uint8_t mask, opposite;
-    uint8_t is_outlet, is_outlet_n;
+    uint8_t is_energy_out, is_energy_out_n;
     for(uint8_t dir = 0; dir < 8; dir++)
     {
         mask = (uint8_t)1 << dir;
@@ -329,10 +334,10 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, uint32_t *moved)
         //             neighbor->on_edge = 0;
                     
         //             neighbor->links |= neighbor->buf_links;
-        //             other->outlet |= neighbor->buf_outlet;
+        //             other->energy_out |= neighbor->buf_energy_out;
                     
         //             neighbor->buf_links = 0;
-        //             neighbor->buf_outlet = 0;
+        //             neighbor->buf_energy_out = 0;
         //         }
         //     }
         // }
@@ -363,7 +368,8 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, uint32_t *moved)
         int16_t Dx, Dy;
         int16_t nx, ny;
         uint8_t mask, opposite;
-        uint8_t is_outlet, is_outlet_n;
+        uint8_t is_energy_out, is_energy_out_n;
+        uint8_t is_matter_out, is_matter_out_n;
         for(uint8_t dir = 0; dir < 8; dir++)
         {
             mask = (uint8_t)1 << dir;
@@ -384,18 +390,31 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, uint32_t *moved)
             {
                 if(local_debug) printf("x %d y %d str %d updating links with x %d y %d str %d on edge %d\n", x, y, str, x + Dx, y + Dy, neighbor->rec_str, neighbor->on_edge);
                 center->links &= (uint8_t)~mask;
-                is_outlet = 0;
-                if(itself->outlet & mask)
+                is_energy_out = 0;
+                if(itself->energy_out & mask)
                 {
-                    is_outlet = 1;
-                    itself->outlet &= (uint8_t)~mask;
+                    is_energy_out = 1;
+                    itself->energy_out &= (uint8_t)~mask;
                 }
                 neighbor->links &= (uint8_t)~opposite;
-                is_outlet_n = 0;
-                if(other->outlet & opposite)
+                is_energy_out_n = 0;
+                if(other->energy_out & opposite)
                 {
-                    is_outlet_n = 1;
-                    other->outlet &= (uint8_t)~opposite;
+                    is_energy_out_n = 1;
+                    other->energy_out &= (uint8_t)~opposite;
+                }
+                is_matter_out = 0;
+                if(itself->matter_out & mask)
+                {
+                    is_matter_out = 1;
+                    itself->matter_out &= (uint8_t)~mask;
+                }
+                neighbor->links &= (uint8_t)~opposite;
+                is_matter_out_n = 0;
+                if(other->matter_out & opposite)
+                {
+                    is_matter_out_n = 1;
+                    other->matter_out &= (uint8_t)~opposite;
                 }
                 
                 uint8_t new_dir = coords_to_dir[Dy - dy + 1][Dx - dx + 1];
@@ -404,23 +423,34 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, uint32_t *moved)
                 opposite = (uint8_t)1 << mod(new_dir + 4, 8);
                 
                 center->buf_links |= mask;
-                if(is_outlet)
+                if(is_energy_out)
                 {
-                    center->buf_outlet |= mask;
+                    center->buf_energy_out |= mask;
                 }
                 neighbor->buf_links |= opposite;
-                if(is_outlet_n)
+                if(is_energy_out_n)
                 {
-                    neighbor->buf_outlet |= opposite;
+                    neighbor->buf_energy_out |= opposite;
+                }
+                
+                if(is_matter_out)
+                {
+                    center->buf_matter_out |= mask;
+                }
+                if(is_matter_out_n)
+                {
+                    neighbor->buf_matter_out |= opposite;
                 }
             }
         }
         
         center->links |= center->buf_links;
-        itself->outlet |= center->buf_outlet; 
+        itself->energy_out |= center->buf_energy_out; 
+        itself->matter_out |= center->buf_matter_out; 
         
         center->buf_links = 0;
-        center->buf_outlet = 0;
+        center->buf_energy_out = 0;
+        center->buf_matter_out = 0;
         
         Grid_Move(x, y, dx, dy);
         *moved = *moved + 1;
@@ -443,10 +473,10 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, uint32_t *moved)
                     neighbor->on_edge = 0;
                     
                     neighbor->links |= neighbor->buf_links;
-                    other->outlet |= neighbor->buf_outlet;
+                    other->energy_out |= neighbor->buf_energy_out;
                     
                     neighbor->buf_links = 0;
-                    neighbor->buf_outlet = 0;
+                    neighbor->buf_energy_out = 0;
                 }
             }
         }
@@ -483,10 +513,10 @@ void Rec_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, uint32_t *moved)
                 neighbor->on_edge = 0;
                 
                 neighbor->links |= neighbor->buf_links;
-                other->outlet |= neighbor->buf_outlet;
+                other->energy_out |= neighbor->buf_energy_out;
                 
                 neighbor->buf_links = 0;
-                neighbor->buf_outlet = 0;
+                neighbor->buf_energy_out = 0;
             }
         }
     }
@@ -601,7 +631,7 @@ void Rec_Immovable(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength)
     int16_t Dx, Dy;
     int16_t nx, ny;
     uint8_t mask, opposite;
-    uint8_t is_outlet, is_outlet_n;
+    uint8_t is_energy_out, is_energy_out_n;
     for(uint8_t dir = 0; dir < 8; dir++)
     {
         mask = (uint8_t)1 << dir;
@@ -815,6 +845,7 @@ uint8_t Neighbor_Energy(int16_t x, int16_t y)
 void Global_Time_Update()
 {
     timer++;
+    long_timer++;
     if(timer % phero_life == 0)
     {
         global_time++;

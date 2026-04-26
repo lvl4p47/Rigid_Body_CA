@@ -16,7 +16,8 @@ typedef struct {
     uint8_t on_edge;
     uint8_t links;
     uint8_t buf_links;
-    uint8_t buf_outlet;
+    uint8_t buf_energy_out;
+    uint8_t buf_matter_out;
     uint8_t will_move;
     uint8_t light;
     
@@ -27,8 +28,10 @@ extern uint16_t grid_width;
 extern uint16_t grid_height;
 
 extern uint8_t timer;
+extern uint32_t long_timer;
 extern Tile **grid_array;
 extern uint8_t border;
+extern uint8_t max_matter;
 
 typedef enum
 {
@@ -81,7 +84,8 @@ typedef struct {
     uint16_t y;
     uint8_t buf_matter;
     uint8_t buf_energy;
-    uint8_t outlet;
+    uint8_t energy_out;
+    uint8_t matter_out;
     uint8_t dir;
     uint8_t photo;
     

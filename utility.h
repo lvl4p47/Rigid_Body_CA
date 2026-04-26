@@ -6,6 +6,7 @@
 #include <SDL2/SDL_timer.h>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
 
 #define RED_BG   "\x1b[41m"
 #define GREEN_BG "\x1b[42m"

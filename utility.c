@@ -57,10 +57,10 @@ float power(int a, int n)
 }
 
 uint32_t rnd() {
-    state ^= state >> 12;
-    state ^= state << 25;
-    state ^= state >> 27;
-    return state * 0x510E527f;
+    state ^= state << 13;
+    state ^= state >> 17;
+    state ^= state << 5;
+    return state;
 }
 
 // STACK
