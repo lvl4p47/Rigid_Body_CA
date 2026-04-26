@@ -283,26 +283,17 @@ void Grid_Draw()
                 int type = tile->type;
                 int matter = tile->matter;
                 int energy = tile->energy;
-                int id = tile->id;
-                int photo = cells[id].photo;
-                int32_t str = tile->rec_str;
-                int8_t move = tile->will_move;
-                int light = 0;
-                if(max_light > 0)
-                    light = tile->light * 255 / max_light;
+                int8_t active = cells[id].active;
+                if(active == 0) continue;
+                
                 uint8_t links = tile->links;
                 uint8_t energy_out = cells[id].energy_out;
                 uint8_t matter_out = cells[id].matter_out;
-                // links = cells[tile->id].matter_out;
                 int r = 0, g = 0, b = 0;
                 
                 r = 16 + matter * 64 / max_matter;
                 g = 16;
                 b = 16 + energy * 64 / 255;
-                
-                // r = matter;
-                // g = (move > 0) * 255;
-                // b = (move < 0) * 255;
                 
                 rect.x = x * CELL_SIZE;
                 rect.y = y * CELL_SIZE;
@@ -479,10 +470,11 @@ void Grid_Draw()
                 int value = tile->on_edge;
                 int32_t str = tile->rec_str;
                 uint8_t links = tile->links;
+                uint8_t active = cells[id].active;
                 // links = cells[tile->id].energy_out;
                 int r = 0, g = 0, b = 0;
                     
-                switch (value)
+                switch (active)
                 {
                 case 0:
                     r = 83;

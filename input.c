@@ -210,7 +210,7 @@ void Events_Process()
     
     if(Grid_Get(grab_x, grab_y)->type != 0 && str > 0)
     {
-        if(push_away)
+        if(push_away && 0)
             moved = Rec_Push_Away(grab_x, grab_y, sx, sy, str, 0);
         else
             moved = Rec_Push(grab_x, grab_y, sx, sy, str, 0);

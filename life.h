@@ -66,6 +66,7 @@ extern uint32_t total_energy_acc;
 extern uint8_t max_light;
 extern uint8_t push_away;
 extern uint32_t lifetime;
+extern uint32_t population_size;
 
 void Genomes_Init();
 void Genomes_Print();

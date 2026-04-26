@@ -22,7 +22,7 @@ uint32_t A;
 uint32_t B;
 
 uint8_t repopulate = 01;
-uint16_t pop_perc = 1000;
+uint16_t pop_perc = 125;
 uint16_t pop_threshold = 1;
 
 uint8_t force_mult = 0;
@@ -36,12 +36,12 @@ uint8_t nat_death = 1;
 
 uint8_t gravity = 01;
 uint16_t grav_period = 1;
-uint16_t grav_rate = 50;
+uint16_t grav_rate = 150;
 
-uint8_t max_light = 128;
+uint8_t max_light = 255;
 uint8_t sun_light = 0;
 uint32_t day_length = GENOME_SIZE * 8;
-uint8_t night_depth = 0;
+uint8_t night_depth = 127;
 
 uint8_t track_energy = 0;
 int32_t energy_generated;
@@ -76,6 +76,7 @@ void Cells_Init()
         cells[id].next = 0;
         cells[id].parent = 0;
         cells[id].used = 0;
+        cells[id].active = 0;
         cells[id].g_id = 0;
         cells[id].pc = 0;
         cells[id].acc = 0;
@@ -102,23 +103,10 @@ void Cells_Update()
     do
     {
         next_id = cells[id].next;
-        if(cells[id].used)
+        if(cells[id].used && cells[id].active
+        )
         {
             Cell_Exec(id);
-        }
-    
-        id = next_id;
-    }
-    while(id != 0);
-    
-    id = 0;
-    next_id = 0;
-    do
-    {
-        next_id = cells[id].next;
-        if(cells[id].used)
-        {
-            Cell_Buf_Upd(id);
         }
     
         id = next_id;
@@ -144,7 +132,8 @@ void Cells_Update()
     do
     {
         next_id = cells[id].next;
-        if(cells[id].used)
+        if(cells[id].used && cells[id].active
+        )
         {
             Cell_Buf_Upd(id);
         }
@@ -298,6 +287,7 @@ void Cell_Create(int16_t x, int16_t y, uint32_t parent, uint8_t photo, uint8_t o
     cells[id].parent = parent;
     cells[id].pc = 0;
     cells[id].used = 1;
+    cells[id].active = 1;
     cells[id].acc = 0;
     Stack_Reset(&cells[id].call_stack);
     Stack_Reset(&cells[id].data_stack);
@@ -345,7 +335,7 @@ void Cell_Destroy(uint32_t id)
     
     if(id == 0) return;
     
-    if(cells[id].used) population_size--;
+    if(cells[id].used && cells[id].active == 1) population_size--;
     
     cells[cells[id].prev].next = cells[id].next;
     cells[cells[id].next].prev = cells[id].prev;
@@ -388,6 +378,7 @@ void Cell_Destroy(uint32_t id)
     cells[id].next = 0;
     cells[id].parent = 0;
     cells[id].used = 0;
+    cells[id].active = 0;
     cells[id].g_id = 0;
     cells[id].pc = 0;
     cells[id].acc = 0;
@@ -569,7 +560,8 @@ void Cell_Exec(uint32_t id)
     if(delta_energy > 0) energy_generated += delta_energy;
     if(delta_energy < 0) energy_lost += delta_energy;
     
-    for(int steps = MAX_STEPS * (1 - life); steps < MAX_STEPS; steps++)
+    if(life == 0 || cell->active == 0) return;
+    for(int steps = 0; steps < MAX_STEPS; steps++)
     {
         gene = &genome->genes[*pc];
         
@@ -756,7 +748,7 @@ void Cell_Exec(uint32_t id)
             // || neighbor->energy < itself->energy)
             )
             {
-                if(neighbor->id != 0// && cell->photo == 0
+                if(neighbor->id != 0 && cell->photo == 0
                 )
                 {
                     Cell_Destroy(neighbor->id);
@@ -1041,11 +1033,24 @@ void Cell_Buf_Upd(uint32_t id)
     cell->buf_matter = 0;
     cell->buf_energy = 0;
     
-    if(rnd() % lifetime == 0 && nat_death)
+    if(rnd() % lifetime == 0 && nat_death && cell->used == 1)
     {
-        if(itself->energy == 0 
-        || itself->energy == 255
-        ) Cell_Destroy(id);
+        if(
+        (  itself->energy == 0 
+        || itself->energy == 255)
+        ) 
+        {
+            if(cell->active == 1)
+            {
+                cell->active = 0;
+                population_size--;
+            }
+        }
+        else if(cell->active == 0)
+        {
+            cell->active = 1;
+            population_size++;
+        }
     }
 }
 
@@ -1072,6 +1077,8 @@ void Redist_Energy(uint32_t id)
     x = cell->x, y = cell->y;
     
     if(Count_Bits_8(itself->links) == 0) return;
+    if(Count_Bits_8(cell->energy_out) == 0
+    && Count_Bits_8(cell->matter_out) == 0) return;
     
     for(uint8_t dir = 0; dir < 8; dir++)
     {
@@ -1135,6 +1142,17 @@ void Redist_Energy(uint32_t id)
             {
                 itself->energy += s_ediff;
                 cell_n->buf_energy -= s_ediff;
+                
+                if(cell->active == 0)
+                {
+                    cell->active = 1;
+                    population_size++;
+                }
+                if(cell_n->active == 0)
+                {
+                    cell_n->active = 1;
+                    population_size++;
+                }
             }
         }
     }
@@ -1174,6 +1192,17 @@ void Redist_Energy(uint32_t id)
                 {
                     itself->energy += s_ediff;
                     cell_n->buf_energy -= s_ediff;
+                    
+                    if(cell->active == 0)
+                    {
+                        cell->active = 1;
+                        population_size++;
+                    }
+                    if(cell_n->active == 0)
+                    {
+                        cell_n->active = 1;
+                        population_size++;
+                    }
                 }
             }
         }
@@ -1242,6 +1271,17 @@ void Redist_Energy(uint32_t id)
             {
                 itself->matter += s_mdiff;
                 cell_n->buf_matter -= s_mdiff;
+                
+                if(cell->active == 0)
+                {
+                    cell->active = 1;
+                    population_size++;
+                }
+                if(cell_n->active == 0)
+                {
+                    cell_n->active = 1;
+                    population_size++;
+                }
             }
         }   
     }
@@ -1282,6 +1322,17 @@ void Redist_Energy(uint32_t id)
                 {
                     itself->matter += s_mdiff;
                     cell_n->buf_matter -= s_mdiff;
+                    
+                    if(cell->active == 0)
+                    {
+                        cell->active = 1;
+                        population_size++;
+                    }
+                    if(cell_n->active == 0)
+                    {
+                        cell_n->active = 1;
+                        population_size++;
+                    }
                 }
             }
         }
@@ -1367,7 +1418,7 @@ void Reanimate(int n)
                     tile = Grid_Get(x, y);
                     
                     if(cells[tile->id].used == 0 && tile->type == 1
-                    && tile->matter == starting_matter && Is_Membrane(x, y))
+                    && tile->matter == starting_matter)
                     {
                         Grid_Set(x, y, 0, 0);
                         Cell_Create(x, y, 0, rnd() % 2, 0);
@@ -1451,6 +1502,8 @@ void Gravity()
         {
             x = rnd() % grid_width;
             y = rnd() % grid_height;
+            
+            if(x == grab_x && y == grab_y) continue;
             
             tile = Grid_Get(x, y);
             if(tile->type == 1)

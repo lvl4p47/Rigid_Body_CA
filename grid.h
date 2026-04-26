@@ -32,6 +32,7 @@ extern uint32_t long_timer;
 extern Tile **grid_array;
 extern uint8_t border;
 extern uint8_t max_matter;
+extern int grab_x, grab_y;
 
 typedef enum
 {
@@ -94,6 +95,7 @@ typedef struct {
     uint32_t parent;
     
     uint8_t used;
+    uint8_t active;
     uint16_t g_id;
     uint8_t pc;
     
