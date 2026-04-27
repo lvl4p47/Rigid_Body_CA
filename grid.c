@@ -118,6 +118,23 @@ void Grid_Set(int16_t x, int16_t y, uint32_t id, uint8_t type)
     grid_array[y1][x1].buf_links = 0;
     grid_array[y1][x1].buf_energy_out = 0;
     grid_array[y1][x1].buf_matter_out = 0;
+    
+    {
+        Tile *tile = Grid_Get(cells[id].x, cells[id].y);
+        Tile *neighbor;
+        
+        int16_t nx, ny;
+        uint8_t mask;
+        for(int dir = 0; dir < 8; dir++)
+        {
+            nx = x + dir_to_coords[dir][0];
+            ny = y + dir_to_coords[dir][1];
+            neighbor = Grid_Get(nx, ny);
+            mask = (uint8_t)1 << mod(dir + 4, 8);
+            
+            neighbor->links &= (uint8_t)~mask;
+        }
+    }
 }
 
 void Grid_Move(int16_t x, int16_t y, int16_t dx, int16_t dy)
@@ -158,6 +175,12 @@ void Grid_Move(int16_t x, int16_t y, int16_t dx, int16_t dy)
     grid_array[y1][x1].buf_energy_out = 0;
     grid_array[y1][x1].buf_matter_out = 0;
     grid_array[y1][x1].will_move = 0;
+    
+    if(x1 == grab_x && y1 == grab_y && lmb_held)
+    {
+        grab_x = x2;
+        grab_y = y2;
+    }
 }
 
 void Grid_Update()
@@ -253,6 +276,7 @@ int32_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strengt
     int16_t nx, ny;
     uint8_t mask, opposite;
     uint8_t is_energy_out, is_energy_out_n;
+    uint8_t push_dir = coords_to_dir[1 + dy][1 + dx];
     for(uint8_t dir = 0; dir < 8; dir++)
     {
         mask = (uint8_t)1 << dir;
@@ -271,7 +295,14 @@ int32_t Rec_Can_Move(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strengt
         )
         {
             if(center->links & mask
-             || linked == 0)
+             || (linked == 0
+             && (
+             dir == mod(push_dir + 4, 8)
+            //  || dir == mod(push_dir + 2, 8)
+            //  || dir == mod(push_dir - 2, 8)
+             )
+             )
+             )
             {
                 ret = Rec_Can_Move(nx, ny, dx, dy, strength - 1, rigid, linked);
                 problems += ret;
@@ -676,7 +707,7 @@ uint32_t Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, 
     uint32_t moved = 0;
     
     // printf("\n");
-    // while(cur_str > 0)
+    do
     {
         
         ret = Rec_Can_Move(x, y, dx, dy, cur_str, rigid, 1);
@@ -697,6 +728,7 @@ uint32_t Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, 
         }
         
     }
+    while(cur_str > 0 && rigid == 0);
     return moved;
 }
 
@@ -706,9 +738,9 @@ uint32_t Rec_Push_Away(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t stren
     int32_t ret;
     uint32_t moved = 0;
     
-    // while(cur_str > 0)
+    while(cur_str > 0)
     {
-        ret = Rec_Can_Move(x, y, -dx, -dy, cur_str, 1, 1);
+        ret = Rec_Can_Move(x, y, -dx, -dy, cur_str, 1, 0);
         Rec_Clean(x, y, -dx, -dy, cur_str);
         if(ret > 0) 
         {
@@ -730,34 +762,6 @@ uint32_t Rec_Push_Away(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t stren
     return moved;
 }
 
-uint32_t Rec_Push_Fake(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, uint8_t rigid)
-{
-    int32_t cur_str = strength;
-    int32_t ret;
-    uint32_t moved = 0;
-    
-    {
-        
-        ret = Rec_Can_Move(x, y, dx, dy, cur_str, rigid, 1);
-        
-        if(ret <= 0) 
-        {
-            Rec_Move(x, y, dx, dy, &moved);
-            Rec_Push(x + dx, y + dy, -dx, -dy, cur_str, rigid);
-            cur_str = -1;
-            
-        }
-        else
-        {
-            Rec_Clean(x, y, dx, dy, cur_str);
-            cur_str--; 
-            
-        }
-        
-    }
-    return moved;
-}
-
 uint32_t Rec_Push_Attempt(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, uint8_t rigid)
 {
     uint32_t ret = Rec_Push(x, y, dx, dy, strength, rigid);
@@ -768,6 +772,34 @@ uint32_t Rec_Push_Attempt(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t st
         return 0;
     }
     return ret;
+}
+
+int32_t Rec_Push_CoM(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength)
+{
+    uint32_t forward = Rec_Push_Away(x, y, dx, dy, strength, 0);
+    int32_t attempts = forward;
+    uint32_t back = 0;
+    
+    if(forward > 0)
+    {
+        while(attempts > 0)
+        {
+            // printf("backing\n");
+            back = Rec_Push_Attempt(x + dx, y + dy, -dx, -dy, max_strength, 1);
+            if(back > 0) break;
+            attempts--;
+        }
+    }
+    else
+        back = Rec_Push_Away(x, y, -dx, -dy, strength, 1);
+    
+    // if(forward > 0) printf("forward\n");
+    // if(back > 0) printf("back\n");
+    
+    if( (forward > 0) && !(back > 0) ) return 1;
+    if( !(forward > 0) && (back > 0) ) return -1;
+    
+    return 0;
 }
 
 void Rec_Link_All(int16_t x, int16_t y, int32_t strength)

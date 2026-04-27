@@ -122,24 +122,25 @@ void Events_Handle()
                 //     && Grid_Get(x + dx, y + dy)->id == 0)
                 //         Grid_Set(x + dx, y + dy, 0, 1);
                 // }
-                // Cell_Create(x, y, 0, rand() % 2, 0);
                 
-                if(Find_Free_Genome_Id() != 0)
-                {
-                    int rad = grid_height / 8;
-                    int amount = max(rad / 4, 1);
-                    int perc = 2 * rad;
+                Cell_Create(x, y, 0, rand() % 2, 0);
+                
+                // if(Find_Free_Genome_Id() != 0)
+                // {
+                //     int rad = grid_height / 8;
+                //     int amount = max(rad / 4, 1);
+                //     int perc = 2 * rad;
                     
-                    int dx, dy;
-                    for(int n = 0; n < amount; n++)
-                    {
-                        dx = rand() % (2 * rad) - rad;
-                        dy = rand() % (2 * rad) - rad;
+                //     int dx, dy;
+                //     for(int n = 0; n < amount; n++)
+                //     {
+                //         dx = rand() % (2 * rad) - rad;
+                //         dy = rand() % (2 * rad) - rad;
                         
-                        if((rand() % perc + rand() % perc) / 2 > abs(dx) + abs(dy))
-                            Cell_Create(x + dx, y + dy, 0, rand() % 2, 0);
-                    }
-                }
+                //         if((rand() % perc + rand() % perc) / 2 > abs(dx) + abs(dy))
+                //             Cell_Create(x + dx, y + dy, 0, rand() % 2, 0);
+                //     }
+                // }
                 
                 
             }
@@ -209,21 +210,20 @@ void Events_Process()
     }
     
     int str = ax + ay;
-    uint16_t moved = 0;
+    int32_t moved = 0;
     
     if(Grid_Get(grab_x, grab_y)->type != 0 && str > 0)
     {
         if(push_away && 0)
-            moved = Rec_Push_Away(grab_x, grab_y, sx, sy, str, 0);
-        else
-            moved = Rec_Push(grab_x, grab_y, sx, sy, str, 0);
-        if(moved)
         {
-            // printf("\ntimer %3d dest_x %d dest_y %d grab_x %d grab_y %d dx %d dy %d str %d\n", timer, dest_x, dest_y, grab_x, grab_y, dx, dy, str);
-            // printf("moved %d\n", moved);
-            
-            grab_x += sx;
-            grab_y += sy;
+            moved = Rec_Push_CoM(grab_x, grab_y, sx, sy, str);
+            // grab_x += sx * moved;
+            // grab_y += sy * moved;
+            printf("grab_x %d grab_y %d moved %d\n", grab_x, grab_y, moved);
+        }
+        else
+        {
+            moved = Rec_Push(grab_x, grab_y, sx, sy, str, 0);
         }
     }
 }

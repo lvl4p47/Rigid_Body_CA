@@ -4,7 +4,7 @@
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
 
-uint8_t draw_links = 01;
+uint8_t draw_links = 01, draw_dots;
 uint8_t display_mode = ENERGY;
 uint32_t prev_matter = 0, prev_energy = 0;
 uint32_t total_matter = 0;
@@ -34,8 +34,9 @@ void Graphics_Init()
         return ;
     }
     
-    draw_links = 0;
+    draw_links = 0, draw_dots = 0;
     if(CELL_SIZE > 2) draw_links = 1;
+    if(CELL_SIZE > 6) draw_dots = 1;
 }
 
 void Graphics_Quit()
@@ -65,6 +66,12 @@ void Grid_Draw()
     rect.w = CELL_SIZE;
     rect.h = CELL_SIZE;
     
+    SDL_Rect dot;
+    dot.x = 0;
+    dot.y = 0;
+    dot.w = 3;
+    dot.h = 3;
+    
     Tile *tile;
     
     int16_t x, y;
@@ -77,7 +84,7 @@ void Grid_Draw()
         
         uint8_t is_morning = 255 * (day_length - long_timer) / day_length;
         uint8_t is_evening = 255 * long_timer / day_length;
-        uint8_t is_day = is_morning * is_evening * 2 / 255;
+        uint8_t is_day = min(is_morning, is_evening);
         
         for(int i = 0; i < grid_height; i++)
         {
@@ -85,7 +92,7 @@ void Grid_Draw()
             {
                 tile = Grid_Get(j, i);
                 int type = tile->type;
-                int matter = tile->matter + (type == 1);
+                int matter = tile->matter;
                 int energy = tile->energy;
                 int id = tile->id;
                 int photo = cells[id].photo;
@@ -124,8 +131,13 @@ void Grid_Draw()
                 
                 if(draw_links == 0) continue;
                 
-                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                
+                dot.x = j * CELL_SIZE + CELL_SIZE / 2 - 1;
+                dot.y = i * CELL_SIZE + CELL_SIZE / 2 - 1;
+                
                 uint8_t mask;
+                uint8_t draw_dot = 0;
                 int16_t dx, dy, cx, cy;
                 cx = rect.x + CELL_SIZE / 2;
                 cy = rect.y + CELL_SIZE / 2;
@@ -138,8 +150,11 @@ void Grid_Draw()
                     if(links & mask)
                     {
                         SDL_RenderDrawLineF(renderer, cx, cy, cx + dx, cy + dy);
+                        draw_dot = 1;
                     }
                 }
+                
+                if(draw_dot && draw_dots) SDL_RenderFillRect(renderer, &dot);
             }
         }
         
@@ -148,8 +163,8 @@ void Grid_Draw()
         // if(total_matter != prev_matter && prev_matter != 0) printf("%d\n", 1 / 0);
         if(total_energy != total_energy_acc) 
         {
-            printf("\t\t\t\tenergy leak total %d accum %d diff %d\n", total_energy, total_energy_acc, total_energy - total_energy_acc);
-            printf("%d\n", 1 / 0);
+            printf("energy leak total %d accum %d diff %d\n", total_energy, total_energy_acc, total_energy - total_energy_acc);
+            // printf("%d\n", 1 / 0);
         }
         prev_matter = total_matter;
         prev_energy = total_energy;
@@ -533,11 +548,12 @@ void Grid_Draw()
                     
                     if(links & mask)
                     {
-                        // if(Grid_Get(x + dir_to_coords[dir][0], y + dir_to_coords[dir][1])->type == 0)
-                        // {
-                        //     pause = 1;
-                        //     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-                        // }
+                        if(Grid_Get(x + dir_to_coords[dir][0], y + dir_to_coords[dir][1])->type == 0)
+                        {
+                            // pause = 1;
+                            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                            printf("links error\n");
+                        }
                         SDL_RenderDrawLineF(renderer, cx, cy, cx + dx, cy + dy);
                     }
                 }

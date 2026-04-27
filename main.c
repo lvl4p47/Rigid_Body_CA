@@ -26,12 +26,10 @@ int main(int argc, char* args[])
         Global_Time_Update();
         
         Events_Handle();
-        
-        if(pause) continue;
 
         Events_Process();
         
-        Cells_Update();
+        if(!pause) Cells_Update();
         
         cur_tick = SDL_GetTicks64();
         
