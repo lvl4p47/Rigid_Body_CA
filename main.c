@@ -2,6 +2,7 @@
 
 uint64_t prev_tick, cur_tick;
 uint16_t cycles = 0, cps = 0, threshold = 1000;
+uint32_t total_cycles = 0;
 uint16_t ms_per_fast_frame = 32, ms_per_slow_frame = 320;
 uint16_t ms_per_frame;
 
@@ -18,8 +19,6 @@ int main(int argc, char* args[])
     prev_tick = SDL_GetTicks64();
 
     while (!quit) {
-        freopen("debug.log", "w", stderr);
-        
         cycles++;
         
         // printf("cps %4d\n", cps);
@@ -53,6 +52,7 @@ int main(int argc, char* args[])
             last_frame = cur_tick;
             Screen_Clear();
             Screen_Draw();
+            freopen("debug.log", "w", stderr);
             // SDL_Delay(100);
         }
         
@@ -60,10 +60,11 @@ int main(int argc, char* args[])
         {
             
             cps = cycles * 1000 / threshold;
+            total_cycles += cycles;
             cycles = 0;
             prev_tick = cur_tick;
-            printf("cps %4d population %5d matter %5d energy %7d\n", cps, population_size, total_matter, total_energy_acc);
-            if(leak_detector && total_energy != total_energy_acc) printf("\t\t\t\tenergy leak\n%d\n", 1 / 0);
+            printf("cps %4d cycle no. %d population %5d matter %d energy %7d sunlight %3d\n", cps, total_cycles, population_size, total_matter, total_energy_acc, sun_light);
+            // if(leak_detector && total_energy != total_energy_acc) printf("\t\t\t\tenergy leak\n%d\n", 1 / 0);
         }
     }
     

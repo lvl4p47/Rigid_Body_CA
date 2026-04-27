@@ -32,7 +32,13 @@ extern uint32_t long_timer;
 extern Tile **grid_array;
 extern uint8_t border;
 extern uint8_t max_matter;
+extern uint8_t starting_matter;
 extern int grab_x, grab_y;
+extern int lmb_held, rmb_held, mmb_held;
+extern uint16_t soil;
+extern int32_t energy_gain, energy_loss;
+extern uint16_t cycles;
+extern uint32_t total_cycles;
 
 typedef enum
 {
@@ -67,6 +73,7 @@ void Rec_Immovable(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength)
 uint32_t Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, uint8_t rigid);
 uint32_t Rec_Push_Away(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, uint8_t rigid);
 uint32_t Rec_Push_Fake(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, uint8_t rigid);
+uint32_t Rec_Push_Attempt(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, uint8_t rigid);
 void Rec_Link_All(int16_t x, int16_t y, int32_t strength);
 void Rec_Connect(int16_t x, int16_t y, int32_t strength);
 uint8_t Is_Membrane(int16_t x, int16_t y);

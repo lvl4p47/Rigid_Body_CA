@@ -35,7 +35,9 @@ void Events_Handle()
             if(e.key.keysym.sym == SDLK_r)
             {
                 Life_Reset(1000);
-                Grid_Reset_Half(1, 300);
+                Grid_Reset(0, 1000);
+                Grid_Reset_Half(1, soil);
+                Reanimate(1000);
             }
             if(e.key.keysym.sym == SDLK_p)
             {
@@ -125,7 +127,7 @@ void Events_Handle()
                 if(Find_Free_Genome_Id() != 0)
                 {
                     int rad = grid_height / 8;
-                    int amount = max(rad / 16, 1);
+                    int amount = max(rad / 4, 1);
                     int perc = 2 * rad;
                     
                     int dx, dy;
@@ -178,6 +180,7 @@ void Events_Handle()
 void Events_Process()
 {
     if(lmb_held == 0) return;
+    
     int dx = (dest_x - grab_x);
     int dy = (dest_y - grab_y);
     

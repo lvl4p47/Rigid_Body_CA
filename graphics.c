@@ -74,13 +74,18 @@ void Grid_Draw()
     case ENERGY:
         total_matter = 0;
         total_energy = 0;
+        
+        uint8_t is_morning = 255 * (day_length - long_timer) / day_length;
+        uint8_t is_evening = 255 * long_timer / day_length;
+        uint8_t is_day = is_morning * is_evening * 2 / 255;
+        
         for(int i = 0; i < grid_height; i++)
         {
             for(int j = 0; j < grid_width; j++)
             {
                 tile = Grid_Get(j, i);
                 int type = tile->type;
-                int matter = tile->matter;
+                int matter = tile->matter + (type == 1);
                 int energy = tile->energy;
                 int id = tile->id;
                 int photo = cells[id].photo;
@@ -93,14 +98,20 @@ void Grid_Draw()
                 // links = cells[tile->id].matter_out;
                 int r = 0, g = 0, b = 0;
                 
-                if(type != 0) total_matter++;
+                if(type == 1) total_matter++;
                 total_matter += matter;
                 total_energy += energy;
                     
-                r = matter * 127 / max_matter + light / 2;
-                g = light / 2;
-                b = energy;
+                r = matter * 127 / max_matter + is_evening * light / 1 / 255;
+                g = is_day * light / 1 / 255;
+                b = energy / 2 + is_morning * light / 1 / 255;
                 
+                if(type == 2)
+                {
+                    r = 255;
+                    g = 255;
+                    b = 255;
+                }
                 // r = matter;
                 // g = (move > 0) * 255;
                 // b = (move < 0) * 255;
@@ -133,9 +144,13 @@ void Grid_Draw()
         }
         
         // printf("total_matter %d\n", total_matter);
-        // printf("prev_energy %d   total_energy %d\n", prev_energy, total_energy);
+        // printf("prev_energy %d   total_energy %d\n\n", prev_energy, total_energy);
         // if(total_matter != prev_matter && prev_matter != 0) printf("%d\n", 1 / 0);
-        // if(total_energy != total_energy_acc) printf("\t\t\t\tenergy leak\n%d\n", 1 / 0);
+        if(total_energy != total_energy_acc) 
+        {
+            printf("\t\t\t\tenergy leak total %d accum %d diff %d\n", total_energy, total_energy_acc, total_energy - total_energy_acc);
+            printf("%d\n", 1 / 0);
+        }
         prev_matter = total_matter;
         prev_energy = total_energy;
         break;

@@ -14,7 +14,6 @@ uint16_t integer;
 uint8_t global_time = 0;
 uint8_t phero_life = 1;
 uint8_t border = 1;
-uint8_t max_matter = 8;
 
 void Grid_Init(uint16_t w, uint16_t h)
 {
@@ -29,7 +28,7 @@ void Grid_Init(uint16_t w, uint16_t h)
     }
     
     Grid_Reset(0, 1000);
-    Grid_Reset_Half(1, 300);
+    Grid_Reset_Half(1, soil);
 }
 
 void Grid_Quit()
@@ -45,13 +44,19 @@ void Grid_Quit()
 void Grid_Reset(uint8_t type, uint16_t chance)
 {
     Tile *tile;
+    int16_t energy_delta;
     if(debug) fprintf(stderr, "\nGrid_Reset"), fflush(stderr);
     for(int i = 0; i < grid_height; i++)
     {
         for(int j = 0; j < grid_width; j++)
         {
             if(rand() % 1000 < chance)
+            {   
+                energy_delta = 0 - Grid_Get(j, i)->energy;
+                if(energy_delta > 0) energy_gain += energy_delta;
+                if(energy_delta < 0) energy_loss += energy_delta;
                 Grid_Set(j, i, 0, type);
+            }
 
         }
     }
@@ -80,13 +85,19 @@ void Grid_Reset_Half(uint8_t type, uint16_t chance)
     if(debug) fprintf(stderr, "\nGrid_Reset"), fflush(stderr);
     uint16_t stripe = min(grid_height * chance / 1000, grid_height);
     // stripe = grid_height;
-    
+    int16_t energy_delta;
     for(int i = grid_height - stripe; i < grid_height; i++)
     {
         for(int j = 0; j < grid_width; j++)
         {
-            Grid_Set(j, i, 0, type);
-            Grid_Get(j, i)->matter = max_matter;
+            if(cells[Grid_Get(j, i)->id].used == 0 && Grid_Get(j, i)->id == 0)
+            {
+                energy_delta = 0 - Grid_Get(j, i)->energy;
+                if(energy_delta > 0) energy_gain += energy_delta;
+                if(energy_delta < 0) energy_loss += energy_delta;
+                Grid_Set(j, i, 0, type);
+                Grid_Get(j, i)->matter = max_matter;
+            }
         }
     }
 }
@@ -745,6 +756,18 @@ uint32_t Rec_Push_Fake(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t stren
         
     }
     return moved;
+}
+
+uint32_t Rec_Push_Attempt(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, uint8_t rigid)
+{
+    uint32_t ret = Rec_Push(x, y, dx, dy, strength, rigid);
+    if(ret <= 0) return 0;
+    if(rnd() % ret != 0)
+    {
+        Rec_Push(x + dx, y + dy, -dx, -dy, strength, rigid);
+        return 0;
+    }
+    return ret;
 }
 
 void Rec_Link_All(int16_t x, int16_t y, int32_t strength)
