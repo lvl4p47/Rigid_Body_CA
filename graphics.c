@@ -119,7 +119,7 @@ void Grid_Draw()
                     
                 r = matter * 127 / (max_matter + 1) + is_evening * light / 1 / 255;
                 g = is_day * light / 1 / 255;
-                b = energy / 2 + is_morning * light / 1 / 255;
+                b = energy * 127 / 256 + is_morning * light / 1 / 255;
                 
                 if(type == 2)
                 {
