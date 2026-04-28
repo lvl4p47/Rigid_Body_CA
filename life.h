@@ -61,6 +61,7 @@ typedef struct {
 
 extern Genome genomes[MAX_GENOMES];
 
+extern int quit;
 extern int32_t energy_change;
 extern uint32_t total_energy_acc;
 extern uint8_t max_light;
@@ -69,13 +70,16 @@ extern uint32_t lifetime;
 extern uint32_t population_size;
 extern uint32_t day_length;
 extern uint8_t sun_light;
-extern uint8_t sudden_death;
+extern uint8_t sudden_death, save_them;
+extern FILE *file_ptr;
 
 void Genomes_Init();
+uint16_t Genome_Upload_Best(uint8_t animal_or_plant);
 void Genomes_Print();
 uint16_t Find_Free_Genome_Id();
 uint16_t Genome_Create(uint16_t par_id);
 void Genome_Destroy(uint16_t g_id);
+void Genome_Download_Best(uint16_t g_id, uint8_t animal_or_plant);
 uint8_t Genome_Copy(uint16_t g_id_to, uint16_t g_id_from, uint16_t mut_rate);
 
 void Cell_Exec(uint32_t id);

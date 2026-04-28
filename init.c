@@ -11,5 +11,6 @@ void All_Init()
 void All_Quit()
 {
     Graphics_Quit();
+    Life_Reset(1000);
     Grid_Quit();
 }

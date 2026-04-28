@@ -11,6 +11,9 @@ uint8_t leak_detector = 0;
 int main(int argc, char* args[])
 {   
     freopen("debug.log", "w", stderr);
+    file_ptr = fopen("followed_exec.txt", "w");
+    fclose(file_ptr);
+    
     srand(clock());
     state = (uint32_t)time(NULL);
     
@@ -23,11 +26,13 @@ int main(int argc, char* args[])
         
         // printf("cps %4d\n", cps);
         
-        Global_Time_Update();
+        if(!pause) Global_Time_Update();
         
         Events_Handle();
 
         Events_Process();
+        
+        Illuminate();
         
         if(!pause) Cells_Update();
         
@@ -51,7 +56,7 @@ int main(int argc, char* args[])
             Screen_Clear();
             Screen_Draw();
             freopen("debug.log", "w", stderr);
-            // SDL_Delay(100);
+            // SDL_Delay(10);
         }
         
         if(cur_tick - prev_tick > threshold || leak_detector)

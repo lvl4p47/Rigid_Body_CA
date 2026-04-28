@@ -41,7 +41,8 @@ void Events_Handle()
             }
             if(e.key.keysym.sym == SDLK_t)
             {
-                sudden_death = 1;
+                sudden_death = 1 - sudden_death;
+                save_them = 1 - save_them;
             }
             if(e.key.keysym.sym == SDLK_p)
             {
@@ -62,6 +63,10 @@ void Events_Handle()
             if(e.key.keysym.sym == SDLK_ESCAPE)
             {
                 SDL_MinimizeWindow(window);
+            }
+            if(e.key.keysym.sym == SDLK_SPACE)
+            {
+                pause = 1 - pause;
             }
         }
         

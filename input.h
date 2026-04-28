@@ -3,7 +3,6 @@
 
 #include "graphics.h"
 
-extern int quit;
 extern uint8_t slow_mode;
 
 void Events_Handle();

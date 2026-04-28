@@ -8,9 +8,6 @@ uint8_t timer = 0;
 uint32_t long_timer = 0;
 uint8_t debug = 0;
 
-FILE *file_ptr;
-uint16_t integer;
-
 uint8_t global_time = 0;
 uint8_t phero_life = 1;
 uint8_t border = 1;

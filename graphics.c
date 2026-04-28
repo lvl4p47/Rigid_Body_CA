@@ -113,7 +113,7 @@ void Grid_Draw()
                 // links = cells[tile->id].matter_out;
                 int r = 0, g = 0, b = 0;
                 
-                if(type == 1) total_matter++, matter++;
+                if(type == 1) total_matter++;
                 total_matter += matter;
                 total_energy += energy;
                     
