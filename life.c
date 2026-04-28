@@ -8,11 +8,11 @@ uint16_t free_g_id;
 
 uint16_t mutation_rate = 62;
 uint16_t mutation_max = 1000;
-uint8_t starting_matter = 8;
+uint8_t starting_matter = 3;
 uint8_t starting_energy = 127;
 uint8_t req_matter = 0;
 uint8_t req_energy = 127;
-uint8_t max_matter = 8;
+uint8_t max_matter = 3;
 uint16_t soil = 300;
 
 uint8_t debug_life = 01;
@@ -23,7 +23,7 @@ uint32_t max_population = 500;
 uint32_t A;
 uint32_t B;
 
-uint8_t repopulate = 0;
+uint8_t repopulate = 01;
 uint16_t pop_perc = 1000;
 uint16_t pop_threshold = 1;
 
@@ -44,7 +44,7 @@ uint32_t max_strength;
 uint8_t max_light = 255;
 uint8_t sun_light = 0;
 uint32_t day_length = GENOME_SIZE * 8;
-uint8_t night_depth = 0;
+uint8_t night_depth = 64;
 
 uint8_t track_energy = 0;
 int32_t energy_gain;
@@ -62,6 +62,12 @@ uint32_t birth_delta;
 uint8_t force_mult_mode = 0;
 
 uint8_t push_away = 01;
+
+uint8_t max_links = 3;
+
+uint8_t sudden_death = 0;
+FILE *file_ptr;
+uint8_t integer;
 
 void Cells_Init()
 {
@@ -147,6 +153,10 @@ void Cells_Update()
     }
     while(id != 0);
     
+    if(sudden_death)
+    {
+        repopulate = 0;
+    }
     
     if(birth_control)
     {
@@ -318,8 +328,8 @@ void Cell_Create(int16_t x, int16_t y, uint32_t parent, uint8_t photo, uint8_t o
     uint8_t mask_dir = (uint8_t)1 << dir;
     uint8_t mask_opp = (uint8_t)1 << opp;
     
-    if(Count_Bits_8(par->links) < 4
-    && Count_Bits_8(new->links) < 4
+    if(Count_Bits_8(par->links) < max_links
+    && Count_Bits_8(new->links) < max_links
     && photo == par_cell->photo)
     {
         par->links |= mask_dir;
@@ -480,6 +490,22 @@ void Genome_Destroy(uint16_t g_id)
     if(g_id == 0) return;
     
     genomes[g_id].used = 0;
+    
+    // if(sudden_death)
+    // {
+    //     char buf[32];
+    //     snprintf(buf, sizeof(buf), "genomes/best_genome.txt");
+        
+    //     file_ptr = NULL;
+    //     file_ptr = fopen(buf, "w");
+
+    //     for(int i = 0; i < GENOME_SIZE; i++)
+    //     {
+    //         fprintf(file_ptr, "%i\t%i\n", genomes[g_id].genes[i].cmd, genomes[g_id].genes[i].arg);
+            
+    //     }
+    //     fclose(file_ptr);
+    // }
     
     free_g_id = g_id;
 }
@@ -655,7 +681,9 @@ void Cell_Exec(uint32_t id)
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
             itself = Grid_Get(cell->x, cell->y);
             
-            cells[neighbor->id].pc = mod(gene->arg, GENOME_SIZE);
+            mask = (uint8_t)1 << cell->dir;
+            if(itself->links & mask || neighbor == itself)
+                cells[neighbor->id].pc = mod(gene->arg, GENOME_SIZE);
             break;
         case CMD_MULTIPLY:
             if(debug_life) fprintf(stderr, "CMD_MULTIPLY\n"), fflush(stderr);
@@ -719,7 +747,7 @@ void Cell_Exec(uint32_t id)
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
             itself = Grid_Get(cell->x, cell->y);
         
-            temp = cell->photo ? 1 : 1 + cell->acc / move_strength;
+            temp = cell->photo ? 0 : 1 + cell->acc / move_strength;
             
             if(dx != 0 && dy != 0
             && rnd() % 1000 > 707) break; 
@@ -761,14 +789,15 @@ void Cell_Exec(uint32_t id)
             eaten_matter = 0;
             eaten_energy = 0;
             if(neighbor->type == 1 && neighbor != itself
-            // && (Count_Bits_8(neighbor->links) <= Count_Bits_8(itself->links)
-            // || neighbor->id == 0)
+            && (Count_Bits_8(neighbor->links) <= Count_Bits_8(itself->links)
+            || neighbor->id == 0
+            || cells[neighbor->id].active == 0)
             // && (neighbor->matter < itself->matter
             // || neighbor->id == 0)
             // || neighbor->energy < itself->energy)
             )
             {
-                if(neighbor->id != 0 && cell->photo == 0
+                if(neighbor->id != 0// && cell->photo == 0
                 )
                 {
                     Cell_Destroy(neighbor->id);
@@ -955,8 +984,8 @@ void Cell_Exec(uint32_t id)
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
             itself = Grid_Get(cell->x, cell->y);
             
-            if(Count_Bits_8(itself->links) > 3
-            || Count_Bits_8(neighbor->links) > 3) break;
+            if(Count_Bits_8(itself->links) >= max_links
+            || Count_Bits_8(neighbor->links) >= max_links) break;
             
             if(neighbor->type == 1 && cell->dir != 8)
             {
@@ -992,8 +1021,8 @@ void Cell_Exec(uint32_t id)
             itself = Grid_Get(cell->x, cell->y);
             temp = gene->arg % 2;
             
-            if(Count_Bits_8(itself->links) > 3
-            || Count_Bits_8(neighbor->links) > 3) break;
+            if(Count_Bits_8(itself->links) >= max_links
+            || Count_Bits_8(neighbor->links) >= max_links) break;
             
             if(neighbor->id != 0 && cell->dir != 8 && cells[neighbor->id].photo == cell->photo)
             {
@@ -1592,7 +1621,7 @@ void Illuminate()
                         // + upper_left->light
                         // + upper_right->light  
                         )
-                        - (upper->matter) * 255 / max_matter// - upper->energy * max_light / 255
+                        - (upper->matter) * 32 / max_matter// - upper->energy * max_light / 255
                         , 0);
                         
                     // tile->light = max( 
@@ -1610,6 +1639,7 @@ void Illuminate()
             }
         }
     }
-    sun_light = max(abs(mod(long_timer + day_length / 2, day_length) - day_length / 2) * (max_light + night_depth) * 2 / day_length - night_depth, 0);
+    if(sudden_death) sun_light = 0;
+    else sun_light = max(abs(mod(long_timer + day_length / 2, day_length) - day_length / 2) * (max_light + night_depth) * 2 / day_length - night_depth, 0);
     // printf("sun_light %d\n", sun_light);
 }

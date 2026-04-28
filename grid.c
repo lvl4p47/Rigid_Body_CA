@@ -100,6 +100,7 @@ void Grid_Reset_Half(uint8_t type, uint16_t chance)
             }
         }
     }
+    Border();
 }
 
 void Grid_Set(int16_t x, int16_t y, uint32_t id, uint8_t type)

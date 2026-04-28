@@ -13,7 +13,7 @@ void Cell_Destroy(uint32_t id);
 
 #define GENOME_SIZE 255
 #define MAX_GENOMES 60000
-#define MAX_STEPS 8
+#define MAX_STEPS 16
 
 typedef enum {
     CMD_NO_OP,
@@ -69,6 +69,7 @@ extern uint32_t lifetime;
 extern uint32_t population_size;
 extern uint32_t day_length;
 extern uint8_t sun_light;
+extern uint8_t sudden_death;
 
 void Genomes_Init();
 void Genomes_Print();

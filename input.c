@@ -1,7 +1,7 @@
 #include "input.h"
 
 int quit = 0;
-uint8_t slow_mode = 1;
+uint8_t slow_mode = 0;
 int lmb_held = 0;
 int rmb_held = 0;
 int mmb_held = 0;
@@ -39,6 +39,10 @@ void Events_Handle()
                 Grid_Reset_Half(1, soil);
                 Reanimate(1000);
             }
+            if(e.key.keysym.sym == SDLK_t)
+            {
+                sudden_death = 1;
+            }
             if(e.key.keysym.sym == SDLK_p)
             {
                 Populate(100);
@@ -46,6 +50,14 @@ void Events_Handle()
             if(e.key.keysym.sym == SDLK_s)
             {
                 slow_mode = 1 - slow_mode;
+            }
+            if(e.key.keysym.sym == SDLK_d)
+            {
+                draw_dots = 1 - draw_dots;
+            }
+            if(e.key.keysym.sym == SDLK_l)
+            {
+                draw_links = 1 - draw_links;
             }
             if(e.key.keysym.sym == SDLK_ESCAPE)
             {

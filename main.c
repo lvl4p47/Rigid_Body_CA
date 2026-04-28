@@ -61,7 +61,7 @@ int main(int argc, char* args[])
             total_cycles += cycles;
             cycles = 0;
             prev_tick = cur_tick;
-            printf("cps %4d cycle no. %d population %5d matter %d energy %7d sunlight %3d\n", cps, total_cycles, population_size, total_matter, total_energy_acc, sun_light);
+            printf("cps %4d cycles %d day %d population %5d matter %d energy %7d sunlight %3d\n", cps, total_cycles, total_cycles / day_length + 1, population_size, total_matter, total_energy_acc, sun_light);
             // if(leak_detector && total_energy != total_energy_acc) printf("\t\t\t\tenergy leak\n%d\n", 1 / 0);
         }
     }
