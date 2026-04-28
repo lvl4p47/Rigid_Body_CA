@@ -90,8 +90,8 @@ void Grid_Draw()
         total_matter = 0;
         total_energy = 0;
         
-        uint8_t is_morning = 255 * (day_length - long_timer) / day_length;
-        uint8_t is_evening = 255 * long_timer / day_length;
+        uint8_t is_evening = 255 * (long_timer % day_length) / day_length;
+        uint8_t is_morning = 255 - is_evening;
         uint8_t is_day = min(is_morning, is_evening);
         
         for(int i = 0; i < grid_height; i++)
@@ -117,9 +117,9 @@ void Grid_Draw()
                 total_matter += matter;
                 total_energy += energy;
                     
-                r = matter * 127 / (max_matter + 1) + is_evening * light / 1 / 255;
-                g = is_day * light / 1 / 255;
-                b = energy * 127 / 256 + is_morning * light / 1 / 255;
+                r = matter * 127 / (max_matter + 1) + is_evening * light / 255;
+                g = is_day * light / 255;
+                b = energy * 127 / 255 + is_morning * light / 255;
                 
                 if(type == 2)
                 {
