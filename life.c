@@ -11,7 +11,7 @@ uint8_t save_them = 0;
 
 uint32_t followed_id = 1;
 
-uint16_t mutation_rate = 62;
+uint16_t mutation_rate = 16;
 uint16_t mutation_max = 1000;
 uint8_t starting_matter = 3;
 uint8_t starting_energy = 127;
@@ -52,6 +52,7 @@ uint8_t max_light = 255;
 uint8_t sun_light = 0;
 uint32_t day_length = GENOME_SIZE * 8;
 uint8_t night_depth = 255;
+int8_t tangent = -128;
 
 uint8_t track_energy = 0;
 int32_t energy_gain;
@@ -265,7 +266,7 @@ void Cell_Create(int16_t x, int16_t y, uint32_t parent, uint8_t photo, uint8_t o
         {
             return;
         }
-        Genome_Copy(cells[id].g_id, cells[id].g_id, mutation_rate);
+        // Genome_Copy(cells[id].g_id, cells[id].g_id, mutation_rate);
     }
     else if(rnd() % mutation_max < mutation_rate)
     {
@@ -1271,8 +1272,8 @@ void Cell_Buf_Upd(uint32_t id)
     int8_t photo_threshold = -1;
     uint8_t thermo_cond = (itself->matter) * 8 / max_matter;
     uint8_t heat_loss = min(Is_Membrane(cell->x, cell->y), thermo_cond);
-    uint8_t light_blocking = (itself->matter) * 255 / max_matter;
-    uint8_t light = min(itself->light, light_blocking) * 8 / max_light;
+    uint8_t light_blocking = (itself->matter) * 8 / max_matter;
+    uint8_t light = itself->light * light_blocking * 8 / max_light;
     int16_t new_energy, old_energy = itself->energy, delta_energy = 0;
     
     if(life && cell->active)
@@ -1717,6 +1718,26 @@ void Illuminate()
     if(1)
     {
         Tile *tile, *upper_left, *upper, *upper_right;
+        uint8_t left_factor = 0, up_factor = 255, right_factor = 0;
+        
+        uint8_t is_evening = 255 * (long_timer % day_length) / day_length;
+        
+        tangent = is_evening - 128;
+        // printf("%d\n", tangent);
+        if(tangent > 0)
+        {
+            right_factor = tangent * 2 + 1;
+            up_factor = 255 - right_factor;
+        }
+        else if(tangent < 0)
+        {
+            left_factor = -tangent * 2 - 1;
+            up_factor = 255 - left_factor;
+        }
+        
+        if(sudden_death) sun_light = 0;
+        else sun_light = max(abs(mod(long_timer + day_length / 2, day_length) - day_length / 2) * (max_light + night_depth) * 2 / day_length - night_depth, 0);        
+        
         for(int y = 0; y < grid_height; y++)
         {
             for(int x = 0; x < grid_width; x++)
@@ -1731,31 +1752,28 @@ void Illuminate()
                     upper_left = Grid_Get(x - 1, y - 1);
                     upper = Grid_Get(x, y - 1);
                     upper_right = Grid_Get(x + 1, y - 1);
-                    tile->light = max( 
-                    (
-                        upper->light
-                        // + upper_left->light
-                        // + upper_right->light  
-                        )
-                        - (upper->matter) * 32 / max_matter// - upper->energy * max_light / 255
-                        , 0);
-                        
                     // tile->light = max( 
                     // (
                     //     upper->light
-                    //     + upper_left->light
-                    //     + upper_right->light 
-                        
-                    //     - upper->matter - (upper->type == 1) - upper->energy * max_light / 255
-                    //     - upper_left->matter - (upper_left->type == 1) - upper_left->energy * max_light / 255
-                    //     - upper_right->matter - (upper_right->type == 1) - upper_right->energy * max_light / 255
-                    //     ) / 3
+                    //     // + upper_left->light
+                    //     // + upper_right->light  
+                    //     )
+                    //     - (upper->matter) * 255 / max_matter// - upper->energy * max_light / 255
                     //     , 0);
+                        
+                    tile->light = max( 
+                    (
+                        upper->light * up_factor
+                        + upper_left->light * left_factor
+                        + upper_right->light * right_factor
+                        ) / 255
+                        - (upper->matter) * 255 / max_matter
+                        
+                        , 0);
                 }
             }
         }
     }
-    if(sudden_death) sun_light = 0;
-    else sun_light = max(abs(mod(long_timer + day_length / 2, day_length) - day_length / 2) * (max_light + night_depth) * 2 / day_length - night_depth, 0);
+    
     // printf("sun_light %d\n", sun_light);
 }
