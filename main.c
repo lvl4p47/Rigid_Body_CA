@@ -56,7 +56,7 @@ int main(int argc, char* args[])
             Screen_Clear();
             Screen_Draw();
             freopen("debug.log", "w", stderr);
-            // SDL_Delay(10);
+            // SDL_Delay(100);
         }
         
         if(cur_tick - prev_tick > threshold || leak_detector)

@@ -48,11 +48,14 @@ uint16_t grav_period = 1;
 uint32_t grav_rate = 150;
 uint32_t max_strength;
 
+uint8_t lighting = 01;
+uint16_t lighting_period = 1;
+uint16_t max_light_strength;
+
 uint8_t max_light = 255;
 uint8_t sun_light = 0;
 uint32_t day_length = GENOME_SIZE * 8;
 uint8_t night_depth = 255;
-int8_t tangent = -128;
 
 uint8_t track_energy = 0;
 int32_t energy_gain;
@@ -838,7 +841,7 @@ void Cell_Exec(uint32_t id)
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
             itself = Grid_Get(cell->x, cell->y);
         
-            temp = cell->photo ? 0 : 1 + cell->acc / move_strength;
+            temp = cell->photo ? 1 : 1 + cell->acc / move_strength;
             
             if(dx != 0 && dy != 0
             && rnd() % 1000 > 707) break; 
@@ -1715,65 +1718,67 @@ void Gravity()
 
 void Illuminate()
 {
-    if(1)
+    if(lighting && (long_timer % lighting_period == 0 || pause))
     {
-        Tile *tile, *upper_left, *upper, *upper_right;
-        uint8_t left_factor = 0, up_factor = 255, right_factor = 0;
+        Tile *tile;
+        uint16_t direction;
         
-        uint8_t is_evening = 255 * (long_timer % day_length) / day_length;
+        direction = 2048 * (long_timer % day_length) / day_length;
         
-        tangent = is_evening - 128;
-        // printf("%d\n", tangent);
-        if(tangent > 0)
-        {
-            right_factor = tangent * 2 + 1;
-            up_factor = 255 - right_factor;
-        }
-        else if(tangent < 0)
-        {
-            left_factor = -tangent * 2 - 1;
-            up_factor = 255 - left_factor;
-        }
+        // printf("%d %d %d\n", direction, direction / 256, direction % 256);
         
         if(sudden_death) sun_light = 0;
-        else sun_light = max(abs(mod(long_timer + day_length / 2, day_length) - day_length / 2) * (max_light + night_depth) * 2 / day_length - night_depth, 0);        
+        else sun_light = max(abs(mod(long_timer + day_length / 2, day_length) - day_length / 2) * (max_light + night_depth) * 2 / day_length - night_depth, 0);
         
         for(int y = 0; y < grid_height; y++)
         {
             for(int x = 0; x < grid_width; x++)
             {
                 tile = Grid_Get(x, y);
-                if(y == 0)
+                tile->light = 0;
+            }
+        }
+        
+        if(sun_light == 0) return;
+        
+        for(int y = 0; y < grid_height; y++)
+        {
+            tile = Grid_Get(0, y);
+            tile->light = 255;
+            
+            tile = Grid_Get(grid_width - 1, y);
+            tile->light = 255;
+        }
+        for(int x = 0; x < grid_width; x++)
+        {
+            tile = Grid_Get(x, 0);
+            tile->light = 255;
+            
+            tile = Grid_Get(x, grid_height - 1);
+            tile->light = 255;
+        }
+        
+        max_light_strength = max(grid_width, grid_height);
+        
+        for(int y = 0; y < grid_height; y++)
+        {
+            for(int x = 0; x < grid_width; x++)
+            {
+                tile = Grid_Get(x, y);
+                if(tile->light == 0)
                 {
-                    tile->light = sun_light;
-                }
-                else
-                {
-                    upper_left = Grid_Get(x - 1, y - 1);
-                    upper = Grid_Get(x, y - 1);
-                    upper_right = Grid_Get(x + 1, y - 1);
-                    // tile->light = max( 
-                    // (
-                    //     upper->light
-                    //     // + upper_left->light
-                    //     // + upper_right->light  
-                    //     )
-                    //     - (upper->matter) * 255 / max_matter// - upper->energy * max_light / 255
-                    //     , 0);
-                        
-                    tile->light = max( 
-                    (
-                        upper->light * up_factor
-                        + upper_left->light * left_factor
-                        + upper_right->light * right_factor
-                        ) / 255
-                        - (upper->matter) * 255 / max_matter
-                        
-                        , 0);
+                    Rec_Find_Light(x, y, max_light_strength, direction, 0);
                 }
             }
         }
+        
+        for(int y = 0; y < grid_height; y++)
+        {
+            for(int x = 0; x < grid_width; x++)
+            {
+                tile = Grid_Get(x, y);
+                tile->rec_str = 0;
+            }
+        }
     }
-    
-    // printf("sun_light %d\n", sun_light);
 }

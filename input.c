@@ -93,6 +93,7 @@ void Events_Handle()
                 grab_y = y;
                 dest_x = x;
                 dest_y = y;
+                
             }
             if (e.button.button == SDL_BUTTON_MIDDLE) 
             {

@@ -84,6 +84,8 @@ void Global_Time_Update();
 void Phero_Set(int16_t x, int16_t y, uint8_t type, uint8_t range);
 uint8_t Phero_Get(int16_t x, int16_t y, uint8_t type, uint8_t update);
 
+uint8_t Rec_Find_Light(int16_t x, int16_t y, int32_t strength, uint16_t direction, uint8_t source);
+
 // CELLS
 
 #define MAX_CELLS 4000000

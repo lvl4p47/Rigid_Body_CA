@@ -56,6 +56,8 @@ void Screen_Clear()
     uint8_t g = is_day * sun_light / 255;
     uint8_t b = is_morning * sun_light / 255;
     
+    // r = 0, g = 0, b = 0;
+    
     SDL_SetRenderDrawColor(renderer, r, g, b, 255);
     SDL_RenderClear(renderer);
 }
@@ -117,9 +119,9 @@ void Grid_Draw()
                 total_matter += matter;
                 total_energy += energy;
                     
-                r = matter * 127 / (max_matter + 1) + is_evening * light / 255;
-                g = is_day * light / 255;
-                b = energy * 127 / 255 + is_morning * light / 255;
+                r = matter * 127 / (max_matter + 1) + light / 2;
+                g = light / 2;
+                b = energy * 127 / 255 + light / 2;
                 
                 if(type == 2)
                 {
@@ -128,8 +130,8 @@ void Grid_Draw()
                     b = 127;
                 }
                 // r = matter;
-                // g = (move > 0) * 255;
-                // b = (move < 0) * 255;
+                // g = max(str * 25, 0);
+                // b = max(-str * 25, 0);
                 
                 rect.x = j * CELL_SIZE;
                 rect.y = i * CELL_SIZE;

@@ -981,3 +981,104 @@ uint8_t Phero_Get(int16_t x, int16_t y, uint8_t type, uint8_t update)
     
     return conc;
 }
+
+uint8_t Rec_Find_Light(int16_t x, int16_t y, int32_t strength, uint16_t direction, uint8_t source)
+{
+    uint8_t local_debug = 0;
+    
+    Tile *center = Grid_Get(x, y);
+    Tile *neighbor;
+    
+    Cell *itself = &cells[center->id];
+    Cell *other;
+    
+    if(strength == 0
+    || x < 0 || y < 0
+    || x > grid_width - 1 || y > grid_height - 1
+    ) 
+    {
+        return 0;
+    }
+    
+    if(local_debug) printf("\nx %d y %d field %d str %d start\n", x, y, center->rec_str, strength);
+    
+    if(center->light != 0 && center->rec_str <= 0)
+    {
+        if(center->rec_str > -strength - 1)
+            center->rec_str = -strength - 1;
+            
+        if(local_debug) printf("x %d y %d field %d str %d found light\n\n", x, y, center->rec_str, strength);
+        return center->light;
+    }
+    
+    int16_t dx = 0, dy = -1;
+    int16_t Dx, Dy;
+    int16_t nx, ny;
+    uint16_t light_acc = 0;
+    uint8_t light_blocking;
+    uint8_t unfinished_directions = 0;
+    
+    uint8_t factors[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t shift = direction % 256;;
+    
+    factors[mod(direction / 256 + 5, 8)] = 255 - shift;
+    factors[mod(direction / 256 + 6, 8)] = shift;
+    
+    
+    for(uint8_t dir = 0; dir < 8; dir++)
+    {
+        if(factors[dir] == 0) continue;
+        unfinished_directions++;
+    }
+    
+    center->rec_str = max(strength, center->rec_str);
+    
+    for(uint8_t dir = 0; dir < 8; dir++)
+    {
+        Dx = dir_to_coords[dir][0];
+        Dy = dir_to_coords[dir][1];
+        nx = x + Dx;
+        ny = y + Dy;
+        neighbor = Grid_Get(nx, ny);
+        other = &cells[neighbor->id];
+        
+        if(factors[dir] == 0) continue;
+        
+        light_blocking = (neighbor->matter + (neighbor->type == 1)) * 255 / (max_matter + 1);
+        
+        if(light_blocking == 255) continue;
+        
+        if(neighbor->rec_str < strength - 1 && neighbor->rec_str > 0
+        || neighbor->rec_str == 0
+        )
+            light_acc += max(Rec_Find_Light(nx, ny, strength - 1, direction, 0)
+            - light_blocking, 0) * factors[dir];
+        else
+        {
+            light_acc += max(neighbor->light
+            - light_blocking, 0) * factors[dir];
+            if(local_debug) printf("x %d y %d field %d str %d taken from x %d y %d\n\n", x, y, center->rec_str, strength, nx, ny);
+        }
+        
+        if(neighbor->rec_str < 0)
+            unfinished_directions--;
+    }
+    
+    light_acc /= 255;
+    
+    center->light = light_acc;
+    
+    if(unfinished_directions == 0)
+    {
+        center->rec_str = -strength - 1;
+        if(local_debug) printf("x %d y %d field %d str %d finished\n", x, y, center->rec_str, strength);
+    }
+    else
+    {
+        if(local_debug) printf("x %d y %d field %d str %d unfinished directions %d\n", x, y, center->rec_str, strength, unfinished_directions);
+    }
+    
+    if(local_debug) printf("x %d y %d field %d str %d end\n\n", x, y, center->rec_str, strength);
+    
+    return center->light;
+}
