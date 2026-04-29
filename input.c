@@ -42,11 +42,11 @@ void Events_Handle()
             if(e.key.keysym.sym == SDLK_t)
             {
                 sudden_death = 1 - sudden_death;
-                save_them = 1 - save_them;
+                // save_them = 1 - save_them;
             }
             if(e.key.keysym.sym == SDLK_p)
             {
-                Populate(100);
+                Populate(1);
             }
             if(e.key.keysym.sym == SDLK_s)
             {
@@ -62,7 +62,8 @@ void Events_Handle()
             }
             if(e.key.keysym.sym == SDLK_ESCAPE)
             {
-                SDL_MinimizeWindow(window);
+                // SDL_MinimizeWindow(window);
+                quit = 1;
             }
             if(e.key.keysym.sym == SDLK_SPACE)
             {
@@ -82,7 +83,7 @@ void Events_Handle()
             {
                 rmb_held = 1;
                 
-                Cell_Create(x, y, 0, rand() % 2, 0);
+                Cell_Create(x, y, 0, 0);
                 
             }
             if (e.button.button == SDL_BUTTON_LEFT) 
@@ -141,7 +142,7 @@ void Events_Handle()
                 //         Grid_Set(x + dx, y + dy, 0, 1);
                 // }
                 
-                Cell_Create(x, y, 0, rand() % 2, 0);
+                Cell_Create(x, y, 0, 0);
                 
                 // if(Find_Free_Genome_Id() != 0)
                 // {

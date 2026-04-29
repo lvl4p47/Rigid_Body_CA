@@ -705,7 +705,7 @@ uint32_t Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, 
     uint32_t moved = 0;
     
     // printf("\n");
-    do
+    // do
     {
         
         ret = Rec_Can_Move(x, y, dx, dy, cur_str, rigid, 1);
@@ -726,7 +726,7 @@ uint32_t Rec_Push(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength, 
         }
         
     }
-    while(cur_str > 0 && rigid == 0);
+    // while(cur_str > 0 && rigid == 0);
     return moved;
 }
 

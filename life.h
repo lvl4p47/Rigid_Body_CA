@@ -6,14 +6,14 @@
 void Cells_Init();
 void Cells_Update();
 uint32_t Find_Free_Id();
-void Cell_Create(int16_t x, int16_t y, uint32_t parent, uint8_t photo, uint8_t out_in);
+void Cell_Create(int16_t x, int16_t y, uint32_t parent, uint8_t out_in);
 void Cell_Destroy(uint32_t id);
 
 // GENOME
 
 #define GENOME_SIZE 255
 #define MAX_GENOMES 60000
-#define MAX_STEPS 16
+#define MAX_STEPS 8
 
 typedef enum {
     CMD_NO_OP,
@@ -62,6 +62,7 @@ typedef struct {
 extern Genome genomes[MAX_GENOMES];
 
 extern int quit;
+extern uint8_t debug_life;
 extern int32_t energy_change;
 extern uint32_t total_energy_acc;
 extern uint8_t push_away;

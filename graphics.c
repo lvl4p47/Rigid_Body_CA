@@ -163,7 +163,7 @@ void Grid_Draw()
         // if(total_matter != prev_matter && prev_matter != 0) printf("%d\n", 1 / 0);
         if(total_energy != total_energy_acc) 
         {
-            printf("energy leak total %d accum %d diff %d\n", total_energy, total_energy_acc, total_energy - total_energy_acc);
+            printf(RED_BG "energy leak total %d accum %d diff %d" RESET "\n", total_energy, total_energy_acc, total_energy - total_energy_acc);
             // printf("%d\n", 1 / 0);
         }
         prev_matter = total_matter;

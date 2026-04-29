@@ -41,12 +41,10 @@ int main(int argc, char* args[])
         if(slow_mode == 0)
         {
             ms_per_frame = ms_per_fast_frame;
-            // printf("fast\n");
         }
         else
         {
             ms_per_frame = ms_per_slow_frame;
-            // printf("slow\n");
         }
         if(cur_tick - last_frame > ms_per_frame || leak_detector)
         {
@@ -55,7 +53,7 @@ int main(int argc, char* args[])
             last_frame = cur_tick;
             Screen_Clear();
             Screen_Draw();
-            freopen("debug.log", "w", stderr);
+            if(debug_life) freopen("debug.log", "w", stderr);
             // SDL_Delay(100);
         }
         
