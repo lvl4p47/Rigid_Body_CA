@@ -775,7 +775,7 @@ uint32_t Rec_Push_Attempt(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t st
 int32_t Rec_Push_CoM(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t strength)
 {
     uint32_t forward = Rec_Push_Away(x, y, dx, dy, strength, 0);
-    int32_t attempts = forward;
+    int32_t attempts = 0;
     uint32_t back = 0;
     
     if(forward > 0)
@@ -982,7 +982,7 @@ uint8_t Phero_Get(int16_t x, int16_t y, uint8_t type, uint8_t update)
     return conc;
 }
 
-uint8_t Rec_Find_Light(int16_t x, int16_t y, int32_t strength, uint16_t direction, uint8_t source)
+uint16_t Rec_Find_Light(int16_t x, int16_t y, int32_t strength, uint16_t direction, uint8_t source)
 {
     uint8_t local_debug = 0;
     
@@ -993,7 +993,12 @@ uint8_t Rec_Find_Light(int16_t x, int16_t y, int32_t strength, uint16_t directio
     Cell *other;
     
     if(strength == 0
-    || x < 0 || y < 0
+    ) 
+    {
+        center->rec_str = -1;
+        return 0;
+    }
+    if(x < 0 || y < 0
     || x > grid_width - 1 || y > grid_height - 1
     ) 
     {
@@ -1014,14 +1019,15 @@ uint8_t Rec_Find_Light(int16_t x, int16_t y, int32_t strength, uint16_t directio
     int16_t dx = 0, dy = -1;
     int16_t Dx, Dy;
     int16_t nx, ny;
-    uint16_t light_acc = 0;
-    uint8_t light_blocking;
+    uint32_t light_acc = 0;
+    uint16_t light_blocking;
     uint8_t unfinished_directions = 0;
     
-    uint8_t factors[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t shift = direction % 256;;
+    uint16_t factors[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    uint16_t maximum = max_light;
+    uint16_t shift = (direction % 256) * maximum / 255;
     
-    factors[mod(direction / 256 + 5, 8)] = 255 - shift;
+    factors[mod(direction / 256 + 5, 8)] = maximum - shift;
     factors[mod(direction / 256 + 6, 8)] = shift;
     
     
@@ -1044,19 +1050,19 @@ uint8_t Rec_Find_Light(int16_t x, int16_t y, int32_t strength, uint16_t directio
         
         if(factors[dir] == 0) continue;
         
-        light_blocking = (neighbor->matter + (neighbor->type == 1)) * 255 / (max_matter + 1);
+        light_blocking = (neighbor->matter + (neighbor->type == 1)) * maximum / (max_matter + 1);
         
-        if(light_blocking == 255) continue;
+        // if(light_blocking == 255) continue;
         
         if(neighbor->rec_str < strength - 1 && neighbor->rec_str > 0
         || neighbor->rec_str == 0
         )
-            light_acc += max(Rec_Find_Light(nx, ny, strength - 1, direction, 0)
-            - light_blocking, 0) * factors[dir];
+            light_acc += min(max(Rec_Find_Light(nx, ny, strength - 1, direction, 0)
+            - light_blocking + sun_height, 0), max_light) * factors[dir];
         else
         {
-            light_acc += max(neighbor->light
-            - light_blocking, 0) * factors[dir];
+            light_acc += min(max(neighbor->light
+            - light_blocking + sun_height, 0), max_light) * factors[dir];
             if(local_debug) printf("x %d y %d field %d str %d taken from x %d y %d\n\n", x, y, center->rec_str, strength, nx, ny);
         }
         
@@ -1064,7 +1070,7 @@ uint8_t Rec_Find_Light(int16_t x, int16_t y, int32_t strength, uint16_t directio
             unfinished_directions--;
     }
     
-    light_acc /= 255;
+    light_acc /= maximum;
     
     center->light = light_acc;
     

@@ -48,17 +48,7 @@ void Graphics_Quit()
 
 void Screen_Clear()
 {
-    uint8_t is_morning = 255 * (day_length - long_timer) / day_length;
-    uint8_t is_evening = 255 * long_timer / day_length;
-    uint8_t is_day = min(is_morning, is_evening);
-    
-    uint8_t r = is_evening * sun_light / 255;
-    uint8_t g = is_day * sun_light / 255;
-    uint8_t b = is_morning * sun_light / 255;
-    
-    // r = 0, g = 0, b = 0;
-    
-    SDL_SetRenderDrawColor(renderer, r, g, b, 255);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
 }
 
@@ -108,9 +98,7 @@ void Grid_Draw()
                 int photo = cells[id].photo;
                 int32_t str = tile->rec_str;
                 int8_t move = tile->will_move;
-                int light = 0;
-                if(max_light > 0)
-                    light = tile->light * 255 / max_light;
+                uint32_t light = 0 * tile->light * 255 / max_light;
                 uint8_t links = tile->links;
                 // links = cells[tile->id].matter_out;
                 int r = 0, g = 0, b = 0;
@@ -349,9 +337,9 @@ void Grid_Draw()
                 uint8_t matter_out = cells[id].matter_out;
                 int r = 0, g = 0, b = 0;
                 
-                r = 16 + matter * 64 / max_matter;
-                g = 16;
-                b = 16 + energy * 64 / 255;
+                r = matter * 255 / max_matter;
+                g = 0;
+                b = energy;
                 
                 rect.x = x * CELL_SIZE;
                 rect.y = y * CELL_SIZE;
@@ -367,7 +355,7 @@ void Grid_Draw()
                 cx = rect.x + CELL_SIZE / 2;
                 cy = rect.y + CELL_SIZE / 2;
                 
-                SDL_SetRenderDrawColor(renderer, 0, 0, energy, 255);
+                SDL_SetRenderDrawColor(renderer, energy, 0, 0, 255);
                 for(uint8_t dir = 0; dir < 8; dir++)
                 {
                     dx = dir_to_coords[dir][0] * CELL_SIZE / 2;
@@ -393,7 +381,7 @@ void Grid_Draw()
                         }
                     }
                 }
-                SDL_SetRenderDrawColor(renderer, matter * 255 / max_matter, 0, 0, 255);
+                SDL_SetRenderDrawColor(renderer, 0, 0, matter * 255 / max_matter, 255);
                 for(uint8_t dir = 0; dir < 8; dir++)
                 {
                     dx = dir_to_coords[dir][0] * CELL_SIZE / 2;

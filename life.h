@@ -64,12 +64,11 @@ extern Genome genomes[MAX_GENOMES];
 extern int quit;
 extern int32_t energy_change;
 extern uint32_t total_energy_acc;
-extern uint8_t max_light;
 extern uint8_t push_away;
 extern uint32_t lifetime;
 extern uint32_t population_size;
 extern uint32_t day_length;
-extern uint8_t sun_light;
+extern uint16_t sun_light;
 extern uint8_t sudden_death, save_them;
 extern FILE *file_ptr;
 

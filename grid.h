@@ -19,7 +19,7 @@ typedef struct {
     uint8_t buf_energy_out;
     uint8_t buf_matter_out;
     uint8_t will_move;
-    uint8_t light;
+    uint16_t light;
     
     uint8_t pheromone[MAX_PHEROMONES][3];
 } Tile;
@@ -40,6 +40,7 @@ extern int32_t energy_gain, energy_loss;
 extern uint16_t cycles;
 extern uint32_t total_cycles;
 extern uint32_t max_strength;
+extern uint16_t max_light, sun_height;
 
 typedef enum
 {
@@ -84,7 +85,7 @@ void Global_Time_Update();
 void Phero_Set(int16_t x, int16_t y, uint8_t type, uint8_t range);
 uint8_t Phero_Get(int16_t x, int16_t y, uint8_t type, uint8_t update);
 
-uint8_t Rec_Find_Light(int16_t x, int16_t y, int32_t strength, uint16_t direction, uint8_t source);
+uint16_t Rec_Find_Light(int16_t x, int16_t y, int32_t strength, uint16_t direction, uint8_t source);
 
 // CELLS
 

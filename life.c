@@ -11,14 +11,14 @@ uint8_t save_them = 0;
 
 uint32_t followed_id = 1;
 
-uint16_t mutation_rate = 16;
+uint16_t mutation_rate = 4;
 uint16_t mutation_max = 1000;
 uint8_t starting_matter = 3;
 uint8_t starting_energy = 127;
 uint8_t req_matter = 0;
 uint8_t req_energy = 127;
 uint8_t max_matter = 3;
-uint16_t soil = 300;
+uint16_t soil = 0;
 
 uint8_t debug_life = 01;
 
@@ -29,7 +29,7 @@ uint32_t A;
 uint32_t B;
 
 uint8_t repopulate = 01;
-uint16_t pop_perc = 1000;
+uint16_t pop_perc = 100;
 uint16_t pop_threshold = 1;
 
 uint8_t force_mult = 0;
@@ -43,17 +43,19 @@ uint8_t eat_div = 1;
 uint8_t life = 01;
 uint8_t nat_death = 1;
 
-uint8_t gravity = 01;
-uint16_t grav_period = 1;
-uint32_t grav_rate = 150;
+uint8_t gravity = 0;
+uint16_t grav_period = 100;
+uint32_t grav_rate = 1;
 uint32_t max_strength;
 
-uint8_t lighting = 01;
-uint16_t lighting_period = 1;
+uint8_t lighting = 0;
+uint16_t lighting_period = 10;
 uint16_t max_light_strength;
+uint16_t direction;
 
-uint8_t max_light = 255;
-uint8_t sun_light = 0;
+uint16_t max_light = 65535;
+uint16_t sun_height = 255;
+uint16_t sun_light = 0;
 uint32_t day_length = GENOME_SIZE * 8;
 uint8_t night_depth = 255;
 
@@ -183,8 +185,9 @@ void Cells_Update()
             save_them = 1;
             Life_Reset(1000);
             Grid_Reset(0, 1000);
-            Grid_Reset_Half(1, soil);
-            Reanimate(pop_perc);
+            // Grid_Reset_Half(1, soil);
+            // Reanimate(pop_perc);
+            Populate(pop_perc);
             birth_debt = 0;
             save_them = 0;
             
@@ -1045,7 +1048,7 @@ void Cell_Exec(uint32_t id)
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
             itself = Grid_Get(cell->x, cell->y);
             
-            cell->acc = neighbor->light;
+            cell->acc = neighbor->light * 255 / max_light;
             break;
         case CMD_LOOK_ACC:
             if(debug_life) fprintf(stderr, "CMD_LOOK_ACC\n"), fflush(stderr);
@@ -1275,8 +1278,8 @@ void Cell_Buf_Upd(uint32_t id)
     int8_t photo_threshold = -1;
     uint8_t thermo_cond = (itself->matter) * 8 / max_matter;
     uint8_t heat_loss = min(Is_Membrane(cell->x, cell->y), thermo_cond);
-    uint8_t light_blocking = (itself->matter) * 8 / max_matter;
-    uint8_t light = itself->light * light_blocking * 8 / max_light;
+    uint32_t light_blocking = (itself->matter) * max_light / max_matter;
+    uint32_t light = min(itself->light * 8 / max_light, Is_Membrane(cell->x, cell->y));
     int16_t new_energy, old_energy = itself->energy, delta_energy = 0;
     
     if(life && cell->active)
@@ -1444,7 +1447,8 @@ void Redist_Energy(uint32_t id)
     }
     
     {
-        desired_matter = -(int16_t)itself->matter;
+        desired_matter = -(int16_t)itself->matter / 2;
+        if(itself->matter == 1) desired_matter = -1;
     }
     
     if(neighbor_amount == 0) return;
@@ -1685,6 +1689,7 @@ void Life_Reset(uint16_t n)
                 if(debug_life) fprintf(stderr, "Life_Reset, energy changed\n");
                 Grid_Set(x, y, 0, 0);
             }
+            tile->light = max_light;
         }
     }
     total_cycles = 0;
@@ -1702,6 +1707,8 @@ void Gravity()
         int32_t ret;
         uint32_t rcm_count = 0;
         uint16_t x, y;
+        int8_t sx, sy;
+        
         for(uint32_t n = 0; n < grav_rate; n++)
         {
             x = rnd() % grid_width;
@@ -1710,7 +1717,43 @@ void Gravity()
             tile = Grid_Get(x, y);
             if(tile->type == 1)
             {
-                Rec_Push_Attempt(x, y, 0, 1, max_strength, 1);
+            
+                if(gravity == 1) sx = 0, sy = 1;
+                
+                if(gravity == 2)
+                {
+                    int dx = (grid_width / 2 - x);
+                    int dy = (grid_height / 2 - y);
+                    
+                    if(dx == 0 && dy == 0) continue;
+                    
+                    uint8_t ax = abs(dx);
+                    uint8_t ay = abs(dy);
+                    sx = sign(dx);
+                    sy = sign(dy);
+                    uint8_t w_diag = min(ax, ay);
+                    uint8_t w_total = max(ax, ay);
+                    uint8_t w_axis = w_total - w_diag;
+                    
+                    if(w_total != 0)
+                    {
+                        uint8_t r = rand() % w_total;
+                        if (r >= w_diag)
+                        {
+                            if(ax > ay) 
+                            {
+                                sy = 0;
+                            }
+                            else 
+                            {
+                                sx = 0;
+                            }
+                        }
+                    }
+                }
+            
+            
+                Rec_Push_Attempt(x, y, sx, sy, max_strength, 1);
             }
         }
     }
@@ -1721,9 +1764,12 @@ void Illuminate()
     if(lighting && (long_timer % lighting_period == 0 || pause))
     {
         Tile *tile;
-        uint16_t direction;
+        uint16_t new_direction;
         
-        direction = 2048 * (long_timer % day_length) / day_length;
+        new_direction = 2048 * (long_timer % day_length) / day_length;
+        
+        if(new_direction == direction) return;
+        direction = new_direction;
         
         // printf("%d %d %d\n", direction, direction / 256, direction % 256);
         
@@ -1739,38 +1785,67 @@ void Illuminate()
             }
         }
         
-        if(sun_light == 0) return;
+        // if(sun_light == 0) return;
         
         for(int y = 0; y < grid_height; y++)
         {
             tile = Grid_Get(0, y);
-            tile->light = 255;
+            tile->light = max_light;
             
             tile = Grid_Get(grid_width - 1, y);
-            tile->light = 255;
+            tile->light = max_light;
         }
         for(int x = 0; x < grid_width; x++)
         {
             tile = Grid_Get(x, 0);
-            tile->light = 255;
+            tile->light = max_light;
             
             tile = Grid_Get(x, grid_height - 1);
-            tile->light = 255;
+            tile->light = max_light;
         }
         
         max_light_strength = max(grid_width, grid_height);
         
+        uint32_t calls = 0;
+        
         for(int y = 0; y < grid_height; y++)
         {
-            for(int x = 0; x < grid_width; x++)
+            int x = 1;
+            tile = Grid_Get(x, y);
+            if(tile->light == 0)
             {
-                tile = Grid_Get(x, y);
-                if(tile->light == 0)
-                {
-                    Rec_Find_Light(x, y, max_light_strength, direction, 0);
-                }
+                Rec_Find_Light(x, y, max_light_strength, direction, 0);
+                calls++;
+            }
+            
+            x = grid_width - 2;
+            tile = Grid_Get(x, y);
+            if(tile->light == 0)
+            {
+                Rec_Find_Light(x, y, max_light_strength, direction, 0);
+                calls++;
             }
         }
+        for(int x = 0; x < grid_width; x++)
+        {
+            int y = 1;
+            tile = Grid_Get(x, y);
+            if(tile->light == 0)
+            {
+                Rec_Find_Light(x, y, max_light_strength, direction, 0);
+                calls++;
+            }
+            
+            y = grid_height - 2;
+            tile = Grid_Get(x, y);
+            if(tile->light == 0)
+            {
+                Rec_Find_Light(x, y, max_light_strength, direction, 0);
+                calls++;
+            }
+        }
+        
+        // printf("%d\n", calls);
         
         for(int y = 0; y < grid_height; y++)
         {
