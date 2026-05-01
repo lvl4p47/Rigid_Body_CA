@@ -15,11 +15,11 @@ uint32_t followed_animal = 1;
 
 uint16_t mutation_rate = 100;
 uint16_t mutation_max = 1000;
-uint8_t starting_matter = 64;
+uint8_t starting_matter = 8;
 uint8_t starting_energy = 127;
 uint8_t req_matter = 0;
 uint8_t req_energy = 127;
-uint8_t max_matter = 64;
+uint8_t max_matter = 8;
 uint16_t soil = 0;
 
 uint8_t debug_life = 0;
@@ -31,7 +31,7 @@ uint32_t A;
 uint32_t B;
 
 uint8_t repopulate = 01;
-uint16_t pop_perc = 1;
+uint16_t pop_perc = 16;
 uint16_t pop_threshold = 1;
 
 uint8_t force_mult = 0;
@@ -40,7 +40,7 @@ uint32_t next_id;
 uint32_t population_size;
 uint32_t plant_pop;
 uint32_t animal_pop;
-uint32_t lifetime = 512;
+uint32_t lifetime = 64;
 uint8_t eat_div = 1;
 uint8_t life = 01;
 uint8_t nat_death = 1;
@@ -721,7 +721,7 @@ void Cell_Exec(uint32_t id)
     
     int16_t pos;
     uint8_t read;
-    int16_t temp;
+    int16_t temp, temp1;
     uint32_t moved;
     Tile *neighbor;
     Tile *itself = Grid_Get(cell->x, cell->y);
@@ -931,7 +931,9 @@ void Cell_Exec(uint32_t id)
             dy = dir_to_coords[cell->dir][1];
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
             itself = Grid_Get(cell->x, cell->y);
+            
             read = cell->photo ? 1 : eat_amount;
+            temp1 = (gene->arg >> 0) & 1;
             
             if(dx != 0 && dy != 0
             && rnd() % 1000 > 707) break; 
@@ -948,7 +950,9 @@ void Cell_Exec(uint32_t id)
             // }
             
             if(neighbor->type == 1 && neighbor != itself
-            && (Count_Bits_8(neighbor->links) <= Count_Bits_8(itself->links)
+            && (
+            // Count_Bits_8(neighbor->links) < Count_Bits_8(itself->links)
+                neighbor->matter < itself->matter
             || neighbor->id == 0
             || cells[neighbor->id].active == 0)
             // && (neighbor->matter < itself->matter
@@ -956,7 +960,7 @@ void Cell_Exec(uint32_t id)
             // || neighbor->energy < itself->energy)
             )
             {
-                if(neighbor->id != 0// && cell->photo == 0
+                if(neighbor->id != 0 && cell->photo == 0
                 )
                 {
                     Cell_Destroy(neighbor->id);
@@ -982,30 +986,31 @@ void Cell_Exec(uint32_t id)
                     break;
                 }
                 
-                
-                if(neighbor->matter >= read && itself->matter + cell->buf_matter + read <= max_matter)
+                if(temp1)
                 {
-                    eaten_matter += read;
-                    cell->buf_matter += read;
-                    neighbor->matter -= read;
-                    cell->acc += 127;
-                }
-                else if(itself->matter + cell->buf_matter + neighbor->matter > max_matter)
-                {
-                    eaten_matter += max_matter - itself->matter - cell->buf_matter;;
-                    neighbor->matter -= max_matter - itself->matter - cell->buf_matter;
-                    cell->buf_matter += max_matter - itself->matter - cell->buf_matter;
-                    cell->acc += 127;
+                    if(neighbor->matter >= read && itself->matter + cell->buf_matter + read <= max_matter)
+                    {
+                        eaten_matter += read;
+                        cell->buf_matter += read;
+                        neighbor->matter -= read;
+                        cell->acc += 127;
+                    }
+                    else if(itself->matter + cell->buf_matter + neighbor->matter > max_matter)
+                    {
+                        eaten_matter += max_matter - itself->matter - cell->buf_matter;;
+                        neighbor->matter -= max_matter - itself->matter - cell->buf_matter;
+                        cell->buf_matter += max_matter - itself->matter - cell->buf_matter;
+                        cell->acc += 127;
+                    }
+                    else
+                    {
+                        eaten_matter += neighbor->matter;
+                        cell->buf_matter += neighbor->matter;
+                        neighbor->matter = 0;
+                        cell->acc += 127;
+                    }
                 }
                 else
-                {
-                    eaten_matter += neighbor->matter;
-                    cell->buf_matter += neighbor->matter;
-                    neighbor->matter = 0;
-                    cell->acc += 127;
-                }
-                
-                // if(cell->photo == 0)
                 {
                     if(neighbor->energy >= read && itself->energy + cell->buf_energy + read <= 255)
                     {
@@ -1403,10 +1408,10 @@ void Cell_Buf_Upd(uint32_t id)
         }
     }
     
-    uint8_t matter_amount = (itself->matter) * 8 / max_matter;
+    uint8_t matter_amount = (itself->matter + (itself->type == 1) ) * 8 / (max_matter + 1);
     uint8_t energy_amount = (itself->energy) * 8 / 255;
-    uint8_t plus_energy = min(Is_Membrane(cell->x, cell->y), matter_amount);
-    uint8_t minus_energy = min(Is_Membrane(cell->x, cell->y), matter_amount);
+    uint8_t plus_energy = Is_Membrane(cell->x, cell->y) * matter_amount;
+    uint8_t minus_energy = Is_Membrane(cell->x, cell->y) * matter_amount;
     int16_t new_energy, old_energy = itself->energy, delta_energy = 0;
     
     if(life && cell->active && rnd() % lifetime == 0)

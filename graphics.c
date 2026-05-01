@@ -365,7 +365,7 @@ void Grid_Draw()
                 cx = rect.x + CELL_SIZE / 2;
                 cy = rect.y + CELL_SIZE / 2;
                 
-                SDL_SetRenderDrawColor(renderer, energy, 0, 0, 255);
+                SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
                 for(uint8_t dir = 0; dir < 8; dir++)
                 {
                     dx = dir_to_coords[dir][0] * CELL_SIZE / 2;
@@ -376,22 +376,22 @@ void Grid_Draw()
                     {
                         if(dx != 0 && dy != 0)
                         {
-                            SDL_RenderDrawLineF(renderer, cx + dx, cy - dy, cx + dx, cy + dy);
-                            SDL_RenderDrawLineF(renderer, cx - dx, cy + dy, cx + dx, cy + dy);
+                            SDL_RenderDrawLineF(renderer, cx + dx / 2, cy - dy / 2, cx + dx, cy + dy);
+                            SDL_RenderDrawLineF(renderer, cx - dx / 2, cy + dy / 2, cx + dx, cy + dy);
                         }
                         else if(dx == 0 && dy != 0)
                         {
-                            SDL_RenderDrawLineF(renderer, cx - half, cy, cx + dx, cy + dy);
-                            SDL_RenderDrawLineF(renderer, cx + half, cy, cx + dx, cy + dy);
+                            SDL_RenderDrawLineF(renderer, cx - half / 2, cy, cx + dx, cy + dy);
+                            SDL_RenderDrawLineF(renderer, cx + half / 2, cy, cx + dx, cy + dy);
                         }
                         else if(dx != 0 && dy == 0)
                         {
-                            SDL_RenderDrawLineF(renderer, cx, cy - half, cx + dx, cy + dy);
-                            SDL_RenderDrawLineF(renderer, cx, cy + half, cx + dx, cy + dy);
+                            SDL_RenderDrawLineF(renderer, cx, cy - half / 2, cx + dx, cy + dy);
+                            SDL_RenderDrawLineF(renderer, cx, cy + half / 2, cx + dx, cy + dy);
                         }
                     }
                 }
-                SDL_SetRenderDrawColor(renderer, 0, 0, matter * 255 / max_matter, 255);
+                SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
                 for(uint8_t dir = 0; dir < 8; dir++)
                 {
                     dx = dir_to_coords[dir][0] * CELL_SIZE / 2;
@@ -402,18 +402,18 @@ void Grid_Draw()
                     {
                         if(dx != 0 && dy != 0)
                         {
-                            SDL_RenderDrawLineF(renderer, cx + dx, cy - dy, cx + dx, cy + dy);
-                            SDL_RenderDrawLineF(renderer, cx - dx, cy + dy, cx + dx, cy + dy);
+                            SDL_RenderDrawLineF(renderer, cx + dx / 2, cy - dy / 2, cx + dx, cy + dy);
+                            SDL_RenderDrawLineF(renderer, cx - dx / 2, cy + dy / 2, cx + dx, cy + dy);
                         }
                         else if(dx == 0 && dy != 0)
                         {
-                            SDL_RenderDrawLineF(renderer, cx - half, cy, cx + dx, cy + dy);
-                            SDL_RenderDrawLineF(renderer, cx + half, cy, cx + dx, cy + dy);
+                            SDL_RenderDrawLineF(renderer, cx - half / 2, cy, cx + dx, cy + dy);
+                            SDL_RenderDrawLineF(renderer, cx + half / 2, cy, cx + dx, cy + dy);
                         }
                         else if(dx != 0 && dy == 0)
                         {
-                            SDL_RenderDrawLineF(renderer, cx, cy - half, cx + dx, cy + dy);
-                            SDL_RenderDrawLineF(renderer, cx, cy + half, cx + dx, cy + dy);
+                            SDL_RenderDrawLineF(renderer, cx, cy - half / 2, cx + dx, cy + dy);
+                            SDL_RenderDrawLineF(renderer, cx, cy + half / 2, cx + dx, cy + dy);
                         }
                     }
                 }
