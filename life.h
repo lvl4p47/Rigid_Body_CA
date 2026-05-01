@@ -41,7 +41,7 @@ typedef enum {
     CMD_LOOK_MAT,
     CMD_LOOK_NRG,
     CMD_LOOK_DIR,
-    // CMD_LOOK_LGHT,
+    CMD_LOOK_LGHT,
     CMD_LOOK_ACC,
     CMD_DETACH,
     CMD_ATTACH,

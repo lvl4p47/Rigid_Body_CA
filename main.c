@@ -32,8 +32,6 @@ int main(int argc, char* args[])
 
         Events_Process();
         
-        // Illuminate();
-        
         if(!pause) Cells_Update();
         
         cur_tick = SDL_GetTicks64();

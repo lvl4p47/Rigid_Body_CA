@@ -72,6 +72,7 @@ void Border()
         {
             Grid_Set(j, 0, 0, 2);
             Grid_Set(j, grid_height - 1, 0, 2);
+            Grid_Get(j, grid_height - 1)->matter = max_matter;
         }
     }
 }
@@ -92,7 +93,7 @@ void Grid_Reset_Half(uint8_t type, uint16_t chance)
                 if(energy_delta > 0) energy_gain += energy_delta;
                 if(energy_delta < 0) energy_loss += energy_delta;
                 Grid_Set(j, i, 0, type);
-                Grid_Get(j, i)->matter = max_matter;
+                Grid_Get(j, i)->matter = starting_matter;
             }
         }
     }
@@ -1055,12 +1056,12 @@ uint16_t Rec_Find_Light(int16_t x, int16_t y, int32_t strength, uint16_t directi
         if(neighbor->rec_str < strength - 1 && neighbor->rec_str > 0
         || neighbor->rec_str == 0
         )
-            light_acc += min(max(Rec_Find_Light(nx, ny, strength - 1, direction, 0)
-            - light_blocking + sun_height, 0), max_light) * factors[dir];
+            light_acc += max(Rec_Find_Light(nx, ny, strength - 1, direction, 0)
+            - light_blocking, 0) * factors[dir];
         else
         {
-            light_acc += min(max(neighbor->light
-            - light_blocking + sun_height, 0), max_light) * factors[dir];
+            light_acc += max(neighbor->light
+            - light_blocking, 0) * factors[dir];
             if(local_debug) printf("x %d y %d field %d str %d taken from x %d y %d\n\n", x, y, center->rec_str, strength, nx, ny);
         }
         

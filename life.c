@@ -15,12 +15,12 @@ uint32_t followed_animal = 1;
 
 uint16_t mutation_rate = 100;
 uint16_t mutation_max = 1000;
-uint8_t starting_matter = 64;
+uint8_t starting_matter = 8;
 uint8_t starting_energy = 127;
 uint8_t req_matter = 0;
 uint8_t req_energy = 127;
-uint8_t max_matter = 64;
-uint16_t soil = 0;
+uint8_t max_matter = 8;
+uint16_t soil = 100;
 
 uint8_t debug_life = 0;
 
@@ -31,7 +31,7 @@ uint32_t A;
 uint32_t B;
 
 uint8_t repopulate = 01;
-uint16_t pop_perc = 1;
+uint16_t pop_perc = 100;
 uint16_t pop_threshold = 1;
 
 uint8_t force_mult = 0;
@@ -40,17 +40,17 @@ uint32_t next_id;
 uint32_t population_size;
 uint32_t plant_pop;
 uint32_t animal_pop;
-uint32_t lifetime = 512;
+uint32_t lifetime = 256;
 uint8_t eat_div = 1;
 uint8_t life = 01;
 uint8_t nat_death = 1;
 
-uint8_t gravity = 0;
-uint16_t grav_period = 100;
+uint8_t gravity = 01;
+uint16_t grav_period = 1;
 uint32_t grav_rate = 1;
 uint32_t max_strength;
 
-uint8_t lighting = 0;
+uint8_t lighting = 01;
 uint16_t lighting_period = 10;
 uint16_t max_light_strength;
 uint16_t direction;
@@ -58,7 +58,7 @@ uint16_t direction;
 uint16_t max_light = 65535;
 uint16_t sun_height = 255;
 uint16_t sun_light = 0;
-uint32_t day_length = GENOME_SIZE * 8;
+uint32_t day_length = 100000;
 uint8_t night_depth = 255;
 
 uint8_t track_energy = 0;
@@ -121,7 +121,7 @@ void Cells_Init()
     animal_pop = 0;
     birth_debt = 0;
     grav_rate = grid_width * grid_height / 100;
-    max_strength = min(grid_height * grid_width, 100);
+    max_strength = min(grid_height * grid_width, 1);
     
     followed_animal_ptr = NULL;
 }
@@ -199,7 +199,9 @@ void Cells_Update()
     {   
         Life_Reset(1000);
         Grid_Reset(0, 1000);
-        Populate(pop_perc);
+        Grid_Reset_Half(1, soil);
+        Reanimate(pop_perc);
+        // Populate(pop_perc);
         
         birth_debt = 0;
         
@@ -209,7 +211,8 @@ void Cells_Update()
         followed_animal_ptr = fopen(buf, "w");
     }
     
-    // Gravity();
+    Gravity();
+    Illuminate();
     
     if(force_mult)
     {
@@ -890,7 +893,7 @@ void Cell_Exec(uint32_t id)
             cell->dir = 8;
             break;
         case CMD_MOVE:
-            steps = max_steps;
+            // steps = max_steps;
             if(debug_life) fprintf(stderr, "CMD_MOVE\n"), fflush(stderr);
             if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_MOVE\n", *pc, gene->arg, cell->acc);
             dx = dir_to_coords[cell->dir][0];
@@ -956,7 +959,7 @@ void Cell_Exec(uint32_t id)
             // || neighbor->energy < itself->energy)
             )
             {
-                if(neighbor->id != 0// && cell->photo == 0
+                if(neighbor->id != 0 && cell->photo == 0
                 )
                 {
                     Cell_Destroy(neighbor->id);
@@ -1057,7 +1060,7 @@ void Cell_Exec(uint32_t id)
                     neighbor = Grid_Get(cell->x + dx * d, cell->y + dy * d);
                     
                     temp = min(temp + neighbor->matter * read / d, max_matter);
-                    neighbor->light = max_light - neighbor->light;
+                    // neighbor->light = max_light - neighbor->light;
                 }
                 temp * 255 / max_matter;
             }
@@ -1068,7 +1071,7 @@ void Cell_Exec(uint32_t id)
                     neighbor = Grid_Get(cell->x + dx * d, cell->y + dy * d);
                     
                     temp = min(temp + neighbor->energy * read / d, 255);
-                    neighbor->light = max_light - neighbor->light;
+                    // neighbor->light = max_light - neighbor->light;
                 }
             }
             
@@ -1164,16 +1167,16 @@ void Cell_Exec(uint32_t id)
             
             cell->acc = mod(cells[neighbor->id].dir - cell->dir, 8);
             break;
-        // case CMD_LOOK_LGHT:
-        //     if(debug_life) fprintf(stderr, "CMD_LOOK_LGHT\n"), fflush(stderr);
-        //     if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_LOOK_LGHT\n", *pc, gene->arg, cell->acc);
-        //     dx = dir_to_coords[cell->dir][0];
-        //     dy = dir_to_coords[cell->dir][1];
-        //     neighbor = Grid_Get(cell->x + dx, cell->y + dy);
-        //     itself = Grid_Get(cell->x, cell->y);
+        case CMD_LOOK_LGHT:
+            if(debug_life) fprintf(stderr, "CMD_LOOK_LGHT\n"), fflush(stderr);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_LOOK_LGHT\n", *pc, gene->arg, cell->acc);
+            dx = dir_to_coords[cell->dir][0];
+            dy = dir_to_coords[cell->dir][1];
+            neighbor = Grid_Get(cell->x + dx, cell->y + dy);
+            itself = Grid_Get(cell->x, cell->y);
             
-        //     cell->acc = neighbor->light * 255 / max_light;
-        //     break;
+            cell->acc = neighbor->light * 255 / max_light;
+            break;
         case CMD_LOOK_ACC:
             if(debug_life) fprintf(stderr, "CMD_LOOK_ACC\n"), fflush(stderr);
             if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_LOOK_ACC\n", *pc, gene->arg, cell->acc);
@@ -1353,7 +1356,7 @@ void Cell_Buf_Upd(uint32_t id)
     cell->buf_energy = 0;
     cell->buf_matter = 0;
     
-    if(nat_death && cell->used == 1)
+    if(nat_death && cell->used == 1 && rnd() % lifetime == 0)
     {
         if(
         (  itself->energy == 0 
@@ -1405,15 +1408,17 @@ void Cell_Buf_Upd(uint32_t id)
     
     uint8_t matter_amount = (itself->matter) * 8 / max_matter;
     uint8_t energy_amount = (itself->energy) * 8 / 255;
-    uint8_t plus_energy = min(Is_Membrane(cell->x, cell->y), matter_amount);
-    uint8_t minus_energy = min(Is_Membrane(cell->x, cell->y), matter_amount);
+    uint8_t how_open = Is_Membrane(cell->x, cell->y);
+    uint8_t light_amount = (itself->light) * 8 / max_light;
+    uint8_t plus_energy = (light_amount * matter_amount);
+    uint8_t minus_energy = ((8 - light_amount) * matter_amount);
     int16_t new_energy, old_energy = itself->energy, delta_energy = 0;
     
-    if(life && cell->active && rnd() % lifetime == 0)
+    if(life && cell->active)
     {
         if(cell->photo == 1)
         {
-            new_energy = (int16_t)(itself->energy + 1 + plus_energy);
+            new_energy = (int16_t)(itself->energy - 1 + plus_energy);
             delta_energy = min(max(new_energy, 0), 255) - itself->energy;
             // if(delta_energy > 0) printf("%d\n", delta_energy);
         }
@@ -1756,7 +1761,6 @@ void Populate(int n)
             }
         }
     }
-    Illuminate();
     Border();
 }
 
@@ -1792,7 +1796,6 @@ void Reanimate(int n)
             }
         }
     }
-    Illuminate();
     Border();
 }
 
@@ -1854,7 +1857,7 @@ void Life_Reset(uint16_t n)
                 Grid_Set(x, y, 0, 0);
             }
             
-            tile->light = max_light * (rnd() % 2);
+            // tile->light = max_light * (rnd() % 2);
         }
     }
     total_cycles = 0;

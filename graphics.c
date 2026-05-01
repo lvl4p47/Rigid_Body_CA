@@ -5,7 +5,7 @@ SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
 
 uint8_t draw_links = 0, draw_dots = 0;
-uint8_t display_mode = TROPHS;
+uint8_t display_mode = ENERGY;
 uint32_t prev_matter = 0, prev_energy = 0;
 uint32_t total_matter = 0;
 uint32_t total_energy = 0;
@@ -103,7 +103,7 @@ void Grid_Draw()
                 int photo = cells[id].photo;
                 int32_t str = tile->rec_str;
                 int8_t move = tile->will_move;
-                uint32_t light = 0 * tile->light * 255 / max_light;
+                uint32_t light = tile->light * 255 / max_light;
                 uint8_t links = tile->links;
                 // links = cells[tile->id].matter_out;
                 int r = 0, g = 0, b = 0;
@@ -112,9 +112,9 @@ void Grid_Draw()
                 total_matter += matter;
                 total_energy += energy;
                     
-                r = (matter + (type == 1)) * 255 / (max_matter + 1);
-                g = (type == 1) * 127;
-                b = energy;
+                r = (matter + (type == 1)) * 127 / (max_matter + 1) + light / 2;
+                g = light / 2;
+                b = energy * 127 / 255 + light / 2;
                 
                 if(type == 2)
                 {
@@ -189,6 +189,7 @@ void Grid_Draw()
                 int str = tile->rec_str;
                 int active = cells[id].active;
                 uint8_t links = tile->links;
+                uint32_t light = tile->light * 255 / max_light;
                 // links = cells[tile->id].energy_out;
                 int r = 0, g = 0, b = 0;
                     
@@ -204,15 +205,19 @@ void Grid_Draw()
                     {
                         if(photo)
                         {
-                            r = energy, g = 255, b = energy;
+                            r = 0, g = 255, b = energy;
                         }
                         else 
                         {
-                            r = 255, g = 255 - energy, b = 255 - energy;
+                            r = 255, g = 0, b = energy;
                         }
                     }
                     break;
                 }
+                
+                r = (r + light) / 2;
+                g = (g + light) / 2;
+                b = (b + light) / 2;
                 
                 if(active == 0)
                 {
