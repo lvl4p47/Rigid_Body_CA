@@ -7,16 +7,19 @@ uint32_t free_id;
 uint16_t free_g_id;
 uint16_t last_plant = 0;
 uint16_t last_animal = 0;
+uint16_t most_plant = 0;
+uint16_t most_animal = 0;
 
-uint32_t followed_id = 1;
+uint8_t follow = 0;
+uint32_t followed_animal = 1;
 
-uint16_t mutation_rate = 62;
+uint16_t mutation_rate = 100;
 uint16_t mutation_max = 1000;
-uint8_t starting_matter = 255;
+uint8_t starting_matter = 64;
 uint8_t starting_energy = 127;
 uint8_t req_matter = 0;
 uint8_t req_energy = 127;
-uint8_t max_matter = 255;
+uint8_t max_matter = 64;
 uint16_t soil = 0;
 
 uint8_t debug_life = 0;
@@ -28,7 +31,7 @@ uint32_t A;
 uint32_t B;
 
 uint8_t repopulate = 01;
-uint16_t pop_perc = 10;
+uint16_t pop_perc = 1;
 uint16_t pop_threshold = 1;
 
 uint8_t force_mult = 0;
@@ -37,7 +40,7 @@ uint32_t next_id;
 uint32_t population_size;
 uint32_t plant_pop;
 uint32_t animal_pop;
-uint32_t lifetime = 8;
+uint32_t lifetime = 512;
 uint8_t eat_div = 1;
 uint8_t life = 01;
 uint8_t nat_death = 1;
@@ -80,8 +83,10 @@ uint8_t max_links = 3;
 uint8_t sudden_death = 0;
 uint8_t save_them = 1;
 
-FILE *file_ptr;
-uint8_t integer;
+uint16_t mutated_organisms = 0, mutated_genes = 0;
+
+FILE *file_ptr, *followed_animal_ptr;
+int integer1, integer2;
 
 void Cells_Init()
 {
@@ -117,6 +122,8 @@ void Cells_Init()
     birth_debt = 0;
     grav_rate = grid_width * grid_height / 100;
     max_strength = min(grid_height * grid_width, 100);
+    
+    followed_animal_ptr = NULL;
 }
 
 void Cells_Update()
@@ -125,12 +132,22 @@ void Cells_Update()
     
     if(debug_life) fprintf(stderr, "Cells_Update\n"), fflush(stderr);
     
+    // Tile *tile;
+    // for(int y = border; y < grid_height - border; y++)
+    // {
+    //     for(int x = border; x < grid_width - border; x++)
+    //     {
+    //         tile = Grid_Get(x, y);
+    //         tile->light = 0;
+    //     }
+    // }
+    
     uint32_t id = 0;
     next_id = 0;
     do
     {
         next_id = cells[id].next;
-        if(cells[id].used && cells[id].active
+        if(cells[id].used// && cells[id].active
         )
         {
             Cell_Exec(id);
@@ -178,32 +195,18 @@ void Cells_Update()
         // lifetime = max(max_lifetime - population_size * max_lifetime / max_population, 1);
         // printf("birth_debt %d\tlifetime %d\t population %d\n", birth_debt, lifetime, population_size);
     }
-    if(birth_debt > max_birth_debt && birth_control
-    || population_size < pop_threshold && repopulate)
-    {
-        if(population_size < pop_threshold && repopulate && !sudden_death)
-        {   
-            Life_Reset(1000);
-            Grid_Reset(0, 1000);
-            // Grid_Reset_Half(1, soil);
-            // Reanimate(pop_perc);
-            // printf("%d %d\n", plant_pop, animal_pop);
-            
-            Populate(pop_perc);
-            
-            birth_debt = 0;
-            
-            // file_ptr = fopen("followed_exec.txt", "w");
-            // fclose(file_ptr);
-        }
-        // else if(birth_control)
-        // {
-        //     Life_Reset(1000);
-        //     Grid_Reset(0, 1000);
-        //     Grid_Reset_Half(1, soil);
-        //     Reanimate(pop_perc);
-        //     birth_debt = 0;
-        // }
+    if((animal_pop < pop_threshold || plant_pop < pop_threshold) && repopulate && !sudden_death)
+    {   
+        Life_Reset(1000);
+        Grid_Reset(0, 1000);
+        Populate(pop_perc);
+        
+        birth_debt = 0;
+        
+        char buf[32];
+        snprintf(buf, sizeof(buf), "followed_exec.txt");
+        followed_animal_ptr = NULL;
+        followed_animal_ptr = fopen(buf, "w");
     }
     
     // Gravity();
@@ -233,6 +236,14 @@ void Cells_Update()
     }
     energy_gain = 0;
     energy_loss = 0;
+    
+    if(long_timer % (uint32_t)(127 * lifetime) == 0)
+    {
+        most_plant = max(most_plant - 1, 0);
+        most_animal = max(most_animal - 1, 0);
+    }
+    
+    
     
     if(sudden_death && population_size == 0) quit = 1;
 }
@@ -265,10 +276,13 @@ void Cell_Create(int16_t x, int16_t y, uint32_t parent, uint8_t out_in)
 
     if(id == 0) return;
     
-    uint8_t photo = cells[parent].photo;
-    if(rnd() % mutation_max < 1 || parent == 0) photo = rnd() % 2;
+    if((cells[followed_animal].active == 0
+     || followed_animal == 0)
+     && cells[followed_animal].photo == 0
+     && follow
+     ) followed_animal = id;
     
-    if(cells[followed_id].active == 0 || followed_id == 0) followed_id = id;
+    uint8_t photo = rnd() % 2;
     
     if(parent == 0)
     {
@@ -277,7 +291,6 @@ void Cell_Create(int16_t x, int16_t y, uint32_t parent, uint8_t out_in)
         {
             return;
         }
-        if(rnd() % mutation_max < mutation_rate) Genome_Copy(cells[id].g_id, cells[id].g_id, mutation_rate);
     }
     else if(rnd() % mutation_max < mutation_rate)
     {
@@ -292,6 +305,8 @@ void Cell_Create(int16_t x, int16_t y, uint32_t parent, uint8_t out_in)
         cells[id].g_id = cells[parent].g_id;
         genomes[cells[id].g_id].used++;
     }
+    
+    photo = (genomes[cells[id].g_id].genes[0].arg >> 0) & 1;
     
     Tile *tile = Grid_Get(x, y);
     if(tile->type != 0) return;
@@ -380,18 +395,28 @@ void Cell_Destroy(uint32_t id)
     
     if(id == 0) return;
     
+    // printf("plants %d animals %d\n", plant_pop, animal_pop);
+    
     if(cells[id].used && cells[id].active == 1)
     {
         population_size--;
         
         if(cells[id].photo)
         {
-            last_plant = cells[id].g_id;
+            if(genomes[cells[id].g_id].used >= most_plant)
+            {
+                last_plant = cells[id].g_id;
+                most_plant = genomes[cells[id].g_id].used;
+            }
             plant_pop--;
         }
         else
         {
-            last_animal = cells[id].g_id;
+            if(genomes[cells[id].g_id].used >= most_animal)
+            {
+                last_animal = cells[id].g_id;
+                most_animal = genomes[cells[id].g_id].used;
+            }
             animal_pop--;
         }
     }
@@ -402,7 +427,7 @@ void Cell_Destroy(uint32_t id)
     Tile *tile = Grid_Get(cells[id].x, cells[id].y);
     Tile *neighbor;
     tile->id = 0;
-    tile->links = 0;
+    // tile->links = 0;
     
     int16_t x, y;
     uint8_t mask;
@@ -413,7 +438,7 @@ void Cell_Destroy(uint32_t id)
         neighbor = Grid_Get(x, y);
         mask = (uint8_t)1 << mod(dir + 4, 8);
         
-        neighbor->links &= (uint8_t)~mask;
+        // neighbor->links &= (uint8_t)~mask;
         cells[neighbor->id].energy_out &= (uint8_t)~mask;
         cells[neighbor->id].matter_out &= (uint8_t)~mask;
     }
@@ -463,6 +488,27 @@ void Genomes_Init()
     }
     
     free_g_id = 1;
+    
+    char buf[32];
+    
+    file_ptr = NULL;
+    snprintf(buf, sizeof(buf), "genomes/species_sizes.txt");
+    file_ptr = fopen(buf, "r");
+    if(file_ptr == NULL)
+    {
+        most_animal = 0;
+        most_plant = 0;
+    }
+    else
+    {
+        fscanf(file_ptr, "%d %d", &integer1, &integer2);
+        
+        most_animal = integer1;
+        most_plant = integer2;
+            
+        fclose(file_ptr);
+    }
+    printf("most_animal %d most_plant %d\n", most_animal, most_plant);
 }
 
 uint16_t Genome_Upload_Best(uint8_t animal_or_plant)
@@ -494,13 +540,17 @@ uint16_t Genome_Upload_Best(uint8_t animal_or_plant)
         // printf("\nBEST_GENOME FOUND\n");
         for(uint8_t g = 0; g < GENOME_SIZE; g++)
         {
-            fscanf(file_ptr, "%i", &integer);
-            genomes[g_id].genes[g].cmd = integer;
-            
-            fscanf(file_ptr, "%i", &integer);
-            genomes[g_id].genes[g].arg = integer;
+            fscanf(file_ptr, "%d %d", &integer1, &integer2);
+            genomes[g_id].genes[g].cmd = integer1;
+            genomes[g_id].genes[g].arg = integer2;
         }
         fclose(file_ptr);
+    }
+    
+    if(rnd() % mutation_max < mutation_rate) 
+    {
+        if(Genome_Copy(g_id, g_id, mutation_rate))
+            mutated_organisms++;
     }
     
     return g_id;
@@ -555,7 +605,11 @@ uint16_t Genome_Create(uint16_t par_id)
     
     genomes[g_id].used = 1;
     
-    if(Genome_Copy(g_id, par_g_id, mutation_rate) == 0) 
+    if(Genome_Copy(g_id, par_g_id, mutation_rate))
+    {
+        mutated_organisms++;
+    }
+    else 
     {
         Genome_Destroy(g_id);
         g_id = par_id;
@@ -575,13 +629,15 @@ void Genome_Destroy(uint16_t g_id)
     if(save_them)
     {
         // printf("save_them\n");
-        if(g_id == last_plant && plant_pop == 0)
+        if(genomes[g_id].genes[0].arg >> 0 & 1 == 1)
         {
-            Genome_Download_Best(g_id, 1);
+            if(g_id == last_plant)
+                Genome_Download_Best(g_id, 1);
         }
-        if(g_id == last_animal && animal_pop == 0)
+        else
         {
-            Genome_Download_Best(g_id, 0);
+            if(g_id == last_animal)
+                Genome_Download_Best(g_id, 0);
         }
     }
     
@@ -593,13 +649,13 @@ void Genome_Download_Best(uint16_t g_id, uint8_t animal_or_plant)
     char buf[32];
     if(animal_or_plant)
     {
-        // printf("the best plant g_id %d\n", g_id);
+        printf(GREEN_BG "the best plant g_id %d used %d" RESET "\n", g_id, most_plant);
         snprintf(buf, sizeof(buf), "genomes/best_plant_genome.txt");
         last_plant = 0;
     }
     else
     {
-        // printf("the best animal g_id %d\n", g_id);
+        printf(GREEN_BG "the best animal g_id %d used %d" RESET "\n", g_id, most_animal);
         snprintf(buf, sizeof(buf), "genomes/best_animal_genome.txt");
         last_animal = 0;
     }
@@ -628,12 +684,20 @@ uint8_t Genome_Copy(uint16_t g_id_to, uint16_t g_id_from, uint16_t mut_rate)
         if(rnd() % mutation_max < mut_rate) 
         {
             genomes[g_id_to].genes[g].cmd = rnd() % CMD_COUNT;
-            if(genomes[g_id_to].genes[g].cmd != genomes[g_id_from].genes[g].cmd) is_dif = 1;
+            if(genomes[g_id_to].genes[g].cmd != genomes[g_id_from].genes[g].cmd)
+            {
+                is_dif = 1;
+                mutated_genes++;
+            }
         }
         if(rnd() % mutation_max < mut_rate)
         {
             genomes[g_id_to].genes[g].arg = rnd() % GENOME_SIZE;
-            if(genomes[g_id_to].genes[g].arg != genomes[g_id_from].genes[g].arg) is_dif = 1;
+            if(genomes[g_id_to].genes[g].arg != genomes[g_id_from].genes[g].arg)
+            {
+                is_dif = 1;
+                mutated_genes++;
+            }
         }
     }
     return is_dif;
@@ -675,20 +739,14 @@ void Cell_Exec(uint32_t id)
     
     if(life == 0 || cell->active == 0) return;
     
-    followed_id = 0;
+    // followed_animal = 0;
     
-    if(followed_id == id)
+    if(followed_animal == id)
     {
-        char buf[32];
-        snprintf(buf, sizeof(buf), "followed_exec.txt");
-        
-        file_ptr = NULL;
-        file_ptr = fopen(buf, "a");
-        
-        fprintf(file_ptr, "followed_id %d\n", followed_id);
+        fprintf(followed_animal_ptr, "followed_animal %d\n", followed_animal);
     }
     
-    uint8_t max_steps = cell->photo ? 1 : MAX_STEPS;
+    uint8_t max_steps = cell->photo ? MAX_STEPS : MAX_STEPS;
     
     for(int steps = 0; steps < max_steps; steps++)
     {
@@ -708,15 +766,15 @@ void Cell_Exec(uint32_t id)
         {
         case CMD_NO_OP:
             if(debug_life) fprintf(stderr, "CMD_NO_OP\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_NO_OP\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_NO_OP\n", *pc, gene->arg, cell->acc);
             break;
         case CMD_LABEL:
             if(debug_life) fprintf(stderr, "CMD_LABEL\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_LABEL\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_LABEL\n", *pc, gene->arg, cell->acc);
             break;
         case CMD_EXEC:
             if(debug_life) fprintf(stderr, "CMD_EXEC\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_EXEC\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_EXEC\n", *pc, gene->arg, cell->acc);
             pos = Find_Tag(genome, cell->acc);
             
             if(pos >= 0)
@@ -727,7 +785,7 @@ void Cell_Exec(uint32_t id)
             break;
         case CMD_RET:
             if(debug_life) fprintf(stderr, "CMD_RET\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_RET\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_RET\n", *pc, gene->arg, cell->acc);
             if(Stack_Pop(&cell->call_stack, &read))
             {
                 *pc = read % GENOME_SIZE;
@@ -735,22 +793,22 @@ void Cell_Exec(uint32_t id)
             break;
         case CMD_PUSH_IMM:
             if(debug_life) fprintf(stderr, "CMD_PUSH_IMM\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_PUSH_IMM\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_PUSH_IMM\n", *pc, gene->arg, cell->acc);
             Stack_Push(&cell->data_stack, gene->arg);
             break;
         case CMD_PUSH_ACC:
             if(debug_life) fprintf(stderr, "CMD_PUSH_ACC\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_PUSH_ACC\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_PUSH_ACC\n", *pc, gene->arg, cell->acc);
             Stack_Push(&cell->data_stack, cell->acc);
             break;
         case CMD_POP:
             if(debug_life) fprintf(stderr, "CMD_POP\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_POP\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_POP\n", *pc, gene->arg, cell->acc);
             Stack_Pop(&cell->data_stack, &cell->acc);
             break;
         case CMD_ADD_POP:
             if(debug_life) fprintf(stderr, "CMD_ADD_POP\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_ADD_POP\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_ADD_POP\n", *pc, gene->arg, cell->acc);
             if(Stack_Pop(&cell->data_stack, &read))
             {
                 temp = cell->acc + read;
@@ -759,7 +817,7 @@ void Cell_Exec(uint32_t id)
             break;
         case CMD_SUB_POP:
             if(debug_life) fprintf(stderr, "CMD_SUB_POP\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_SUB_POP\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_SUB_POP\n", *pc, gene->arg, cell->acc);
             if(Stack_Pop(&cell->data_stack, &read))
             {
                 temp = cell->acc - read;
@@ -768,7 +826,7 @@ void Cell_Exec(uint32_t id)
             break;
         case CMD_CMP_POP:
             if(debug_life) fprintf(stderr, "CMD_CMP_POP\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_CMP_POP\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_CMP_POP\n", *pc, gene->arg, cell->acc);
             if(Stack_Pop(&cell->data_stack, &read))
             {
                 temp = (cell->acc > read);
@@ -777,7 +835,7 @@ void Cell_Exec(uint32_t id)
             break;
         case CMD_SET_PTR:
             if(debug_life) fprintf(stderr, "CMD_SET_PTR\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_SET_PTR\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_SET_PTR\n", *pc, gene->arg, cell->acc);
             dx = dir_to_coords[cell->dir][0];
             dy = dir_to_coords[cell->dir][1];
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
@@ -789,9 +847,9 @@ void Cell_Exec(uint32_t id)
             break;
         case CMD_MULTIPLY:
             if(sudden_death) break;
-            steps = MAX_STEPS;
+            steps = max_steps;
             if(debug_life) fprintf(stderr, "CMD_MULTIPLY\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_MULTIPLY\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_MULTIPLY\n", *pc, gene->arg, cell->acc);
             dx = dir_to_coords[cell->dir][0];
             dy = dir_to_coords[cell->dir][1];
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
@@ -804,7 +862,7 @@ void Cell_Exec(uint32_t id)
             {
                 cell->acc = 0;
                 
-                if(itself->matter >= 2 + 1
+                if(itself->matter >= 1
                 && itself->energy >= 2
                 && cells[neighbor->id].used == 0
                 && neighbor->matter == 0
@@ -820,21 +878,21 @@ void Cell_Exec(uint32_t id)
             break;
         case CMD_ROT:
             if(debug_life) fprintf(stderr, "CMD_ROT\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_ROT\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_ROT\n", *pc, gene->arg, cell->acc);
             if(cell->dir == 8)
                 cell->dir = rnd() % 8;
-            temp = cell->dir + gene->arg;
+            temp = cell->dir + cell->acc;
             cell->dir = mod(temp, 8);
             break;
         case CMD_CENTRE:
             if(debug_life) fprintf(stderr, "CMD_CENTRE\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_CENTRE\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_CENTRE\n", *pc, gene->arg, cell->acc);
             cell->dir = 8;
             break;
         case CMD_MOVE:
-            steps = MAX_STEPS;
+            steps = max_steps;
             if(debug_life) fprintf(stderr, "CMD_MOVE\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_MOVE\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_MOVE\n", *pc, gene->arg, cell->acc);
             dx = dir_to_coords[cell->dir][0];
             dy = dir_to_coords[cell->dir][1];
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
@@ -866,9 +924,9 @@ void Cell_Exec(uint32_t id)
             
             break;
         case CMD_EAT:
-            steps = MAX_STEPS;
+            steps = max_steps;
             if(debug_life) fprintf(stderr, "CMD_EAT\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_EAT\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_EAT\n", *pc, gene->arg, cell->acc);
             dx = dir_to_coords[cell->dir][0];
             dy = dir_to_coords[cell->dir][1];
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
@@ -898,7 +956,7 @@ void Cell_Exec(uint32_t id)
             // || neighbor->energy < itself->energy)
             )
             {
-                if(neighbor->id != 0 && cell->photo == 0
+                if(neighbor->id != 0// && cell->photo == 0
                 )
                 {
                     Cell_Destroy(neighbor->id);
@@ -947,20 +1005,20 @@ void Cell_Exec(uint32_t id)
                     cell->acc += 127;
                 }
                 
-                if(cell->photo == 0)
+                // if(cell->photo == 0)
                 {
-                    if(neighbor->energy >= read && itself->energy + cell->buf_energy < 255 - read)
+                    if(neighbor->energy >= read && itself->energy + cell->buf_energy + read <= 255)
                     {
                         eaten_energy += read;
                         cell->buf_energy += read;
                         neighbor->energy -= read;
                         cell->acc += 127;
                     }
-                    else if(itself->energy + cell->buf_energy + neighbor->energy > 254)
+                    else if(itself->energy + cell->buf_energy + neighbor->energy > 255)
                     {
-                        eaten_energy += 254 - itself->energy - cell->buf_energy;
-                        neighbor->energy -= (254 - itself->energy - cell->buf_energy);
-                        cell->buf_energy += 254 - itself->energy - cell->buf_energy;
+                        eaten_energy += 255 - itself->energy - cell->buf_energy;
+                        neighbor->energy -= 255 - itself->energy - cell->buf_energy;
+                        cell->buf_energy += 255 - itself->energy - cell->buf_energy;
                         cell->acc += 127;
                     }
                     else 
@@ -977,9 +1035,61 @@ void Cell_Exec(uint32_t id)
                 //     Rec_Push_Attempt(x, y, dx, dy, max_strength, 0);
             }
             break;
+        case CMD_SCAN:
+            steps = max_steps;
+            if(debug_life) fprintf(stderr, "CMD_SCAN\n"), fflush(stderr);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_SCAN\n", *pc, gene->arg, cell->acc);
+            dx = dir_to_coords[cell->dir][0];
+            dy = dir_to_coords[cell->dir][1];
+            neighbor = Grid_Get(cell->x + dx, cell->y + dy);
+            itself = Grid_Get(cell->x, cell->y);
+            
+            temp = 0;
+            if(dx != 0 && dy != 0)
+                read = 7;
+            else
+                read = 10;
+            
+            if((gene->arg >> 0) & 1 == 0)
+            {
+                for(int d = 1; d < read; d++)
+                {
+                    neighbor = Grid_Get(cell->x + dx * d, cell->y + dy * d);
+                    
+                    temp = min(temp + neighbor->matter * read / d, max_matter);
+                    neighbor->light = max_light - neighbor->light;
+                }
+                temp * 255 / max_matter;
+            }
+            else
+            {
+                for(int d = 1; d < read; d++)
+                {
+                    neighbor = Grid_Get(cell->x + dx * d, cell->y + dy * d);
+                    
+                    temp = min(temp + neighbor->energy * read / d, 255);
+                    neighbor->light = max_light - neighbor->light;
+                }
+            }
+            
+            cell->acc = temp;
+            break;
+        case CMD_DIE:
+            steps = max_steps;
+            if(debug_life) fprintf(stderr, "CMD_SCAN\n"), fflush(stderr);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_SCAN\n", *pc, gene->arg, cell->acc);
+            dx = dir_to_coords[cell->dir][0];
+            dy = dir_to_coords[cell->dir][1];
+            neighbor = Grid_Get(cell->x + dx, cell->y + dy);
+            itself = Grid_Get(cell->x, cell->y);
+            
+            next_id = cell->next;
+            Cell_Destroy(itself->id);
+            
+            break;
         case CMD_LOOK_TYPE:
             if(debug_life) fprintf(stderr, "CMD_LOOK_TYPE\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_LOOK_TYPE\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_LOOK_TYPE\n", *pc, gene->arg, cell->acc);
             dx = dir_to_coords[cell->dir][0];
             dy = dir_to_coords[cell->dir][1];
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
@@ -989,7 +1099,7 @@ void Cell_Exec(uint32_t id)
             break;
         case CMD_LOOK_GNM:
             if(debug_life) fprintf(stderr, "CMD_LOOK_GNM\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_LOOK_GNM\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_LOOK_GNM\n", *pc, gene->arg, cell->acc);
             dx = dir_to_coords[cell->dir][0];
             dy = dir_to_coords[cell->dir][1];
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
@@ -999,7 +1109,7 @@ void Cell_Exec(uint32_t id)
             break;
         case CMD_LOOK_LINK:
             if(debug_life) fprintf(stderr, "CMD_LOOK_LINK\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_LOOK_LINK\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_LOOK_LINK\n", *pc, gene->arg, cell->acc);
             dx = dir_to_coords[cell->dir][0];
             dy = dir_to_coords[cell->dir][1];
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
@@ -1016,7 +1126,7 @@ void Cell_Exec(uint32_t id)
             break;
         case CMD_LOOK_MEMB:
             if(debug_life) fprintf(stderr, "CMD_LOOK_MEMB\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_LOOK_MEMB\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_LOOK_MEMB\n", *pc, gene->arg, cell->acc);
             dx = dir_to_coords[cell->dir][0];
             dy = dir_to_coords[cell->dir][1];
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
@@ -1026,7 +1136,7 @@ void Cell_Exec(uint32_t id)
             break;
         case CMD_LOOK_MAT:
             if(debug_life) fprintf(stderr, "CMD_LOOK_MAT\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_LOOK_MAT\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_LOOK_MAT\n", *pc, gene->arg, cell->acc);
             dx = dir_to_coords[cell->dir][0];
             dy = dir_to_coords[cell->dir][1];
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
@@ -1036,7 +1146,7 @@ void Cell_Exec(uint32_t id)
             break;
         case CMD_LOOK_NRG:
             if(debug_life) fprintf(stderr, "CMD_LOOK_NRG\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_LOOK_NRG\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_LOOK_NRG\n", *pc, gene->arg, cell->acc);
             dx = dir_to_coords[cell->dir][0];
             dy = dir_to_coords[cell->dir][1];
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
@@ -1044,19 +1154,29 @@ void Cell_Exec(uint32_t id)
             
             cell->acc = neighbor->energy;
             break;
-        case CMD_LOOK_LGHT:
-            if(debug_life) fprintf(stderr, "CMD_LOOK_LGHT\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_LOOK_LGHT\n", *pc, gene->arg, cell->acc);
+        case CMD_LOOK_DIR:
+            if(debug_life) fprintf(stderr, "CMD_LOOK_NRG\n"), fflush(stderr);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_LOOK_NRG\n", *pc, gene->arg, cell->acc);
             dx = dir_to_coords[cell->dir][0];
             dy = dir_to_coords[cell->dir][1];
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
             itself = Grid_Get(cell->x, cell->y);
             
-            cell->acc = neighbor->light * 255 / max_light;
+            cell->acc = mod(cells[neighbor->id].dir - cell->dir, 8);
             break;
+        // case CMD_LOOK_LGHT:
+        //     if(debug_life) fprintf(stderr, "CMD_LOOK_LGHT\n"), fflush(stderr);
+        //     if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_LOOK_LGHT\n", *pc, gene->arg, cell->acc);
+        //     dx = dir_to_coords[cell->dir][0];
+        //     dy = dir_to_coords[cell->dir][1];
+        //     neighbor = Grid_Get(cell->x + dx, cell->y + dy);
+        //     itself = Grid_Get(cell->x, cell->y);
+            
+        //     cell->acc = neighbor->light * 255 / max_light;
+        //     break;
         case CMD_LOOK_ACC:
             if(debug_life) fprintf(stderr, "CMD_LOOK_ACC\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_LOOK_ACC\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_LOOK_ACC\n", *pc, gene->arg, cell->acc);
             dx = dir_to_coords[cell->dir][0];
             dy = dir_to_coords[cell->dir][1];
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
@@ -1066,7 +1186,7 @@ void Cell_Exec(uint32_t id)
             break;
         case CMD_DETACH:
             if(debug_life) fprintf(stderr, "CMD_DETACH\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_DETACH\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_DETACH\n", *pc, gene->arg, cell->acc);
             dx = dir_to_coords[cell->dir][0];
             dy = dir_to_coords[cell->dir][1];
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
@@ -1090,7 +1210,7 @@ void Cell_Exec(uint32_t id)
             break;
         case CMD_ATTACH:
             if(debug_life) fprintf(stderr, "CMD_ATTACH\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_ATTACH\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_ATTACH\n", *pc, gene->arg, cell->acc);
             dx = dir_to_coords[cell->dir][0];
             dy = dir_to_coords[cell->dir][1];
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
@@ -1111,7 +1231,7 @@ void Cell_Exec(uint32_t id)
             break;
         case CMD_OUTLET_OFF:
             if(debug_life) fprintf(stderr, "CMD_OUTLET_OFF\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_OUTLET_OFF\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_OUTLET_OFF\n", *pc, gene->arg, cell->acc);
             dx = dir_to_coords[cell->dir][0];
             dy = dir_to_coords[cell->dir][1];
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
@@ -1128,7 +1248,7 @@ void Cell_Exec(uint32_t id)
             break;
         case CMD_OUTLET_ON:
             if(debug_life) fprintf(stderr, "CMD_OUTLET_ON\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_OUTLET_ON\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_OUTLET_ON\n", *pc, gene->arg, cell->acc);
             dx = dir_to_coords[cell->dir][0];
             dy = dir_to_coords[cell->dir][1];
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
@@ -1155,17 +1275,17 @@ void Cell_Exec(uint32_t id)
             break;
         case CMD_SET_PHERO:
             if(debug_life) fprintf(stderr, "CMD_SET_PHERO\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_SET_PHERO\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_SET_PHERO\n", *pc, gene->arg, cell->acc);
             dx = dir_to_coords[cell->dir][0];
             dy = dir_to_coords[cell->dir][1];
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
             itself = Grid_Get(cell->x, cell->y);
             
-            Phero_Set(cell->x, cell->y, gene->arg * MAX_PHEROMONES / 255, cell->acc);
+            Phero_Set(cell->x, cell->y, gene->arg * MAX_PHEROMONES / 255, cell->acc / 4);
             break;
         case CMD_GET_PHERO:
             if(debug_life) fprintf(stderr, "CMD_GET_PHERO\n"), fflush(stderr);
-            if(followed_id == id) fprintf(file_ptr, "pc %d\t%d\t%d\tCMD_GET_PHERO\n", *pc, gene->arg, cell->acc);
+            if(followed_animal == id) fprintf(followed_animal_ptr, "pc %d\t%d\t%d\tCMD_GET_PHERO\n", *pc, gene->arg, cell->acc);
             dx = dir_to_coords[cell->dir][0];
             dy = dir_to_coords[cell->dir][1];
             neighbor = Grid_Get(cell->x + dx, cell->y + dy);
@@ -1190,12 +1310,6 @@ void Cell_Exec(uint32_t id)
         // ) Cell_Destroy(id), steps = MAX_STEPS;
         
         if(print) fprintf(stderr, "acc %3d\n", cell->acc);
-    }
-    
-    if(followed_id == id)
-    {
-        fflush(file_ptr);
-        fclose(file_ptr);
     }
 }
 
@@ -1253,13 +1367,21 @@ void Cell_Buf_Upd(uint32_t id)
                 population_size--;
                 if(cell->photo)
                 {
-                    last_plant = cell->g_id;
+                    if(genomes[cells[id].g_id].used > most_plant)
+                    {
+                        last_plant = cells[id].g_id;
+                        most_plant = genomes[cells[id].g_id].used;
+                    }
                     plant_pop--;
                     Cell_Destroy(itself->id);
                 }
                 else
                 {
-                    last_animal = cell->g_id;
+                    if(genomes[cells[id].g_id].used > most_animal)
+                    {
+                        last_animal = cell->g_id;
+                        most_animal = genomes[cells[id].g_id].used;
+                    }
                     animal_pop--;
                     Cell_Destroy(itself->id);
                 }
@@ -1281,24 +1403,23 @@ void Cell_Buf_Upd(uint32_t id)
         }
     }
     
-    int8_t photo_threshold = -1;
-    uint8_t thermo_cond = (itself->matter) * 8 / max_matter;
-    uint8_t heat_loss = min(Is_Membrane(cell->x, cell->y), thermo_cond);
-    uint32_t light_blocking = (itself->matter) * max_light / max_matter;
-    uint32_t light = min(itself->light * 8 / max_light, Is_Membrane(cell->x, cell->y));
+    uint8_t matter_amount = (itself->matter) * 8 / max_matter;
+    uint8_t energy_amount = (itself->energy) * 8 / 255;
+    uint8_t plus_energy = min(Is_Membrane(cell->x, cell->y), matter_amount);
+    uint8_t minus_energy = min(Is_Membrane(cell->x, cell->y), matter_amount);
     int16_t new_energy, old_energy = itself->energy, delta_energy = 0;
     
     if(life && cell->active && rnd() % lifetime == 0)
     {
         if(cell->photo == 1)
         {
-            new_energy = (int16_t)(itself->energy + 1 + Is_Membrane(cell->x, cell->y));
+            new_energy = (int16_t)(itself->energy + 1 + plus_energy);
             delta_energy = min(max(new_energy, 0), 255) - itself->energy;
             // if(delta_energy > 0) printf("%d\n", delta_energy);
         }
         else
         {
-            new_energy = (int16_t)(itself->energy - (1 + Is_Membrane(cell->x, cell->y) ) );// - max(heat_loss - light, 0)
+            new_energy = (int16_t)(itself->energy - 1 - minus_energy);
             delta_energy = max(new_energy, 0) - itself->energy;
             // if(delta_energy < -1) printf("%d\n", delta_energy);
         }
@@ -1372,31 +1493,40 @@ void Redist_Energy(uint32_t id)
         mask = (uint8_t)1 << dir;
         dx = dir_to_coords[dir][0];
         dy = dir_to_coords[dir][1];
-        neighbor = Grid_Get(x + dx, y + dy);
-        cell_n = &cells[neighbor->id];
         
-        if(cell->energy_out & mask
-        && neighbor->id != 0
-        && cell_n->used
-        && cell_n->photo == cell->photo)
+        if(dx != 0 && dy != 0
+        && rnd() % 1000 > 707)
         {
-            res_energy = (int16_t)(neighbor->energy + cell_n->buf_energy - spread_energy);
+        
+        }
+        else
+        {
+            neighbor = Grid_Get(x + dx, y + dy);
+            cell_n = &cells[neighbor->id];
             
-            ediff = spread_energy;
-            
-            if(res_energy > 255)
+            if(cell->energy_out & mask
+            && neighbor->id != 0
+            && cell_n->used
+            && cell_n->photo == cell->photo)
             {
-                ediff = neighbor->energy + cell_n->buf_energy - 255;
-                res_energy = 255;
-            }
-            s_ediff = (ediff);
-            
-            if(life
-            && itself->energy + s_ediff > -1 && neighbor->energy + cell_n->buf_energy - s_ediff < 256
-            )
-            {
-                itself->energy += s_ediff;
-                cell_n->buf_energy -= s_ediff;
+                res_energy = (int16_t)(neighbor->energy + cell_n->buf_energy - spread_energy);
+                
+                ediff = spread_energy;
+                
+                if(res_energy > 255)
+                {
+                    ediff = neighbor->energy + cell_n->buf_energy - 255;
+                    res_energy = 255;
+                }
+                s_ediff = (ediff);
+                
+                if(life
+                && itself->energy + s_ediff > -1 && neighbor->energy + cell_n->buf_energy - s_ediff < 256
+                )
+                {
+                    itself->energy += s_ediff;
+                    cell_n->buf_energy -= s_ediff;
+                }
             }
         }
     }
@@ -1407,6 +1537,10 @@ void Redist_Energy(uint32_t id)
             mask = (uint8_t)1 << dir;
             dx = dir_to_coords[dir][0];
             dy = dir_to_coords[dir][1];
+            
+            if(dx != 0 && dy != 0
+            && rnd() % 1000 > 707) continue;
+            
             neighbor = Grid_Get(x + dx, y + dy);
             cell_n = &cells[neighbor->id];
             
@@ -1473,35 +1607,44 @@ void Redist_Energy(uint32_t id)
         mask = (uint8_t)1 << dir;
         dx = dir_to_coords[dir][0];
         dy = dir_to_coords[dir][1];
-        neighbor = Grid_Get(x + dx, y + dy);
-        cell_n = &cells[neighbor->id];
         
-        if(cell->matter_out & mask
-        && neighbor->id != 0
-        && cell_n->used
-        && cell_n->photo == cell->photo)
+        if(dx != 0 && dy != 0
+        && rnd() % 1000 > 707)
         {
-            res_matter = (int16_t)(neighbor->matter + cell_n->buf_matter - spread_matter);
+        
+        }
+        else
+        {
+            neighbor = Grid_Get(x + dx, y + dy);
+            cell_n = &cells[neighbor->id];
             
-            mdiff = spread_matter;
-            
-            if(res_matter > max_matter)
+            if(cell->matter_out & mask
+            && neighbor->id != 0
+            && cell_n->used
+            && cell_n->photo == cell->photo)
             {
-                mdiff = neighbor->matter + cell_n->buf_matter - max_matter;
-                res_matter = max_matter;
-            }
-            
-            s_mdiff = (mdiff);
-            
-            if(life
-            && itself->matter + cell->buf_matter + s_mdiff > -1 && itself->matter + cell->buf_matter + s_mdiff <= max_matter
-            && neighbor->matter + cell_n->buf_matter - s_mdiff > -1 && neighbor->matter + cell_n->buf_matter - s_mdiff <= max_matter
-            )
-            {
-                itself->matter += s_mdiff;
-                cell_n->buf_matter -= s_mdiff;
-            }
-        }   
+                res_matter = (int16_t)(neighbor->matter + cell_n->buf_matter - spread_matter);
+                
+                mdiff = spread_matter;
+                
+                if(res_matter > max_matter)
+                {
+                    mdiff = neighbor->matter + cell_n->buf_matter - max_matter;
+                    res_matter = max_matter;
+                }
+                
+                s_mdiff = (mdiff);
+                
+                if(life
+                && itself->matter + cell->buf_matter + s_mdiff > -1 && itself->matter + cell->buf_matter + s_mdiff <= max_matter
+                && neighbor->matter + cell_n->buf_matter - s_mdiff > -1 && neighbor->matter + cell_n->buf_matter - s_mdiff <= max_matter
+                )
+                {
+                    itself->matter += s_mdiff;
+                    cell_n->buf_matter -= s_mdiff;
+                }
+            }   
+        }
     }
     else
     {
@@ -1510,6 +1653,10 @@ void Redist_Energy(uint32_t id)
             mask = (uint8_t)1 << dir;
             dx = dir_to_coords[dir][0];
             dy = dir_to_coords[dir][1];
+            
+            if(dx != 0 && dy != 0
+            && rnd() % 1000 > 707) continue;
+            
             neighbor = Grid_Get(x + dx, y + dy);
             cell_n = &cells[neighbor->id];
             
@@ -1703,14 +1850,40 @@ void Life_Reset(uint16_t n)
                 energy_delta = 0 - Grid_Get(x, y)->energy;
                 if(energy_delta > 0) energy_gain += energy_delta;
                 if(energy_delta < 0) energy_loss += energy_delta;
-                if(debug_life) fprintf(stderr, "Life_Reset, energy changed\n");
+                // if(debug_life) fprintf(stderr, "Life_Reset, energy changed\n");
                 Grid_Set(x, y, 0, 0);
             }
-            tile->light = max_light;
+            
+            tile->light = max_light * (rnd() % 2);
         }
     }
     total_cycles = 0;
     cycles = 0;
+    
+    last_plant = 0;
+    last_animal = 0;
+    
+    most_plant = max(most_plant - 1, 0);
+    most_animal = max(most_animal - 1, 0);
+    
+    mutated_organisms = 0;
+    mutated_genes = 0;
+    
+    char buf[32];
+    file_ptr = NULL;
+    snprintf(buf, sizeof(buf), "genomes/species_sizes.txt");
+    file_ptr = fopen(buf, "w");
+
+    fprintf(file_ptr, "%i\t%i\n", most_animal, most_plant);
+    
+    fclose(file_ptr);
+    
+    if(followed_animal_ptr != NULL)
+    {
+        fflush(followed_animal_ptr);
+        fclose(followed_animal_ptr);
+        followed_animal_ptr = NULL;
+    }
 }
 
 void Gravity()

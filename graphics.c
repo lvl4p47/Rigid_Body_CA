@@ -4,8 +4,8 @@
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
 
-uint8_t draw_links = 01, draw_dots;
-uint8_t display_mode = ENERGY;
+uint8_t draw_links = 0, draw_dots = 0;
+uint8_t display_mode = TROPHS;
 uint32_t prev_matter = 0, prev_energy = 0;
 uint32_t total_matter = 0;
 uint32_t total_energy = 0;
@@ -34,9 +34,14 @@ void Graphics_Init()
         return ;
     }
     
-    draw_links = 0, draw_dots = 0;
-    if(CELL_SIZE > 2) draw_links = 1;
-    if(CELL_SIZE > 6) draw_dots = 1;
+    if(draw_links)
+    {
+        if(CELL_SIZE > 2) draw_links = 1;
+    }
+    if(draw_dots)
+    {
+        if(CELL_SIZE > 6) draw_dots = 1;
+    }
 }
 
 void Graphics_Quit()
@@ -107,9 +112,9 @@ void Grid_Draw()
                 total_matter += matter;
                 total_energy += energy;
                     
-                r = matter * 127 / (max_matter + 1) + light / 2;
-                g = light / 2;
-                b = energy * 127 / 255 + light / 2;
+                r = (matter + (type == 1)) * 255 / (max_matter + 1);
+                g = (type == 1) * 127;
+                b = energy;
                 
                 if(type == 2)
                 {
@@ -194,12 +199,17 @@ void Grid_Draw()
                     break;
                 
                 default:
-                    r = 0, g = 0, b = energy;
+                    r = 0, g = 0, b = 0;
                     if(id != 0)
                     {
                         if(photo)
-                            g = 255;
-                        else r = 255;
+                        {
+                            r = energy, g = 255, b = energy;
+                        }
+                        else 
+                        {
+                            r = 255, g = 255 - energy, b = 255 - energy;
+                        }
                     }
                     break;
                 }

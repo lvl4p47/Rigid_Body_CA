@@ -92,7 +92,7 @@ uint32_t rnd();
 
 // STACK
 
-#define STACK_SIZE 16
+#define STACK_SIZE 32
 
 typedef struct Stack {
     uint8_t data[STACK_SIZE];

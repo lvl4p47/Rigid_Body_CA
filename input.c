@@ -236,9 +236,7 @@ void Events_Process()
         if(push_away && 0)
         {
             moved = Rec_Push_CoM(grab_x, grab_y, sx, sy, str);
-            // grab_x += sx * moved;
-            // grab_y += sy * moved;
-            printf("grab_x %d grab_y %d moved %d\n", grab_x, grab_y, moved);
+            // printf("grab_x %d grab_y %d moved %d\n", grab_x, grab_y, moved);
         }
         else
         {

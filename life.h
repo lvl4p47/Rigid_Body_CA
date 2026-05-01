@@ -13,7 +13,7 @@ void Cell_Destroy(uint32_t id);
 
 #define GENOME_SIZE 255
 #define MAX_GENOMES 60000
-#define MAX_STEPS 8
+#define MAX_STEPS 255
 
 typedef enum {
     CMD_NO_OP,
@@ -32,13 +32,16 @@ typedef enum {
     CMD_CENTRE,
     CMD_MOVE,
     CMD_EAT,
+    CMD_SCAN,
+    CMD_DIE,
     CMD_LOOK_TYPE,
     CMD_LOOK_GNM,
     CMD_LOOK_LINK,
     CMD_LOOK_MEMB,
     CMD_LOOK_MAT,
     CMD_LOOK_NRG,
-    CMD_LOOK_LGHT,
+    CMD_LOOK_DIR,
+    // CMD_LOOK_LGHT,
     CMD_LOOK_ACC,
     CMD_DETACH,
     CMD_ATTACH,
@@ -70,6 +73,7 @@ extern uint32_t lifetime;
 extern uint32_t population_size;
 extern uint32_t day_length;
 extern uint16_t sun_light;
+extern uint16_t mutated_organisms, mutated_genes;
 extern uint8_t sudden_death, save_them;
 extern FILE *file_ptr;
 

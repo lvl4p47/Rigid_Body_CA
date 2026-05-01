@@ -54,7 +54,6 @@ void Grid_Reset(uint8_t type, uint16_t chance)
                 if(energy_delta < 0) energy_loss += energy_delta;
                 Grid_Set(j, i, 0, type);
             }
-
         }
     }
     Border();
@@ -735,7 +734,6 @@ uint32_t Rec_Push_Away(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t stren
     int32_t cur_str = strength;
     int32_t ret;
     uint32_t moved = 0;
-    
     while(cur_str > 0)
     {
         ret = Rec_Can_Move(x, y, -dx, -dy, cur_str, 1, 0);
@@ -751,10 +749,10 @@ uint32_t Rec_Push_Away(int16_t x, int16_t y, int8_t dx, int8_t dy, int32_t stren
             else
             {
                 Rec_Clean(x, y, dx, dy, cur_str);
-                cur_str--; 
+                cur_str /= 2; 
             }
         }
-        cur_str--;
+        cur_str /= 2;
         
     }
     return moved;
